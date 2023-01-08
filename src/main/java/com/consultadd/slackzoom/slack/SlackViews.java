@@ -1,11 +1,9 @@
 package com.consultadd.slackzoom.slack;
 
-import com.consultadd.slackzoom.models.ZoomAccount;
+import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.services.ZoomAccountService;
-import com.slack.api.model.block.DividerBlock;
-import com.slack.api.model.block.InputBlock;
-import com.slack.api.model.block.LayoutBlock;
-import com.slack.api.model.block.SectionBlock;
+import com.consultadd.slackzoom.utils.TimeUtils;
+import com.slack.api.model.block.*;
 import com.slack.api.model.block.composition.MarkdownTextObject;
 import com.slack.api.model.block.composition.OptionObject;
 import com.slack.api.model.block.composition.PlainTextObject;
@@ -18,9 +16,10 @@ import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -33,6 +32,9 @@ public class SlackViews {
     public final static String MODAL_VIEW = "modal";
     public final static String PLAIN_TEXT = "plain_text";
     public final static String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
+    public static final String DANGER = "danger";
+    public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "release_booked_account";
+    public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
 
     private final ZoomAccountService accountService;
 
@@ -139,41 +141,45 @@ public class SlackViews {
 
         blocks.add(DividerBlock.builder().build());
 
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
-        int start = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE);
-        Set<String> availableAccounts = accountService
-                .findAvailableAccounts(start, start)
-                .stream()
-                .map(ZoomAccount::getAccountId)
-                .collect(Collectors.toSet());
+        Map<String, Booking> activeBookings = accountService.findActiveBookings();
+
         AtomicInteger count = new AtomicInteger(1);
         accountService.getAllAccounts().forEach(zoomAccount -> {
-            SectionBlock.SectionBlockBuilder builder = SectionBlock.builder();
-            StringBuilder textBuilder = new StringBuilder();
-            textBuilder
-                    .append("`")
-                    .append(count.getAndIncrement())
-                    .append(".` *")
-                    .append(zoomAccount.getAccountName())
-                    .append("*\n");
-            if (availableAccounts.contains(zoomAccount.getAccountId())) {
-                textBuilder.append("Available");
-                builder = builder.accessory(ButtonElement
-                        .builder()
-                        .actionId("use_account-" + zoomAccount.getAccountId())
-                        .text(PlainTextObject.builder().text("USE").build())
-                        .style("primary")
-                        .build());
-            } else {
-                textBuilder.append("In use");
-            }
-            builder = builder.text(MarkdownTextObject
+            Booking booking = activeBookings.get(zoomAccount.getAccountId());
+            blocks.add(SectionBlock
                     .builder()
-                    .text(textBuilder.toString())
+                    .text(MarkdownTextObject
+                            .builder()
+                            .text("`" + count.getAndIncrement() + ".` *" + zoomAccount.getAccountName() + "*" + (booking == null ? " (available)" : " (in use)"))
+                            .build())
                     .build());
-            blocks.add(builder.build());
+            if (booking != null) {
+                blocks.add(ContextBlock
+                        .builder()
+                        .elements(List.of(MarkdownTextObject
+                                .builder()
+                                .text("<@" +
+                                        booking.getUserId() +
+                                        "> is using this account right now and it will get available after " +
+                                        TimeUtils.timeToString(booking.getEndTime()) +
+                                        " EST.")
+                                .build()))
+                        .build());
+            }
         });
 
+        blocks.add(ActionsBlock
+                .builder()
+                .elements(List.of(ButtonElement
+                        .builder()
+                                .actionId(ACTION_BOOK_ACCOUNT_REQUEST)
+                                .style("primary")
+                                .text(PlainTextObject
+                                        .builder()
+                                        .text("Need account")
+                                        .build())
+                        .build()))
+                .build());
         return blocks;
     }
 

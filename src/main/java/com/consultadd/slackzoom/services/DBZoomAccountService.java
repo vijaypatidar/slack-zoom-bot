@@ -2,10 +2,13 @@ package com.consultadd.slackzoom.services;
 
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.models.ZoomAccount;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,11 +20,9 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 @RequiredArgsConstructor
 @Slf4j
 public class DBZoomAccountService implements ZoomAccountService {
-    Map<String, List<Booking>> bookings = new HashMap<>();
-
-    private String accountsTable = "slack-bot-zoom-accounts";
-
     private final DynamoDbClient dynamoDbClient;
+    List<Booking> bookings = new LinkedList<>();
+    private final String accountsTable = "slack-bot-zoom-accounts";
 
     @Override
     public List<ZoomAccount> getAllAccounts() {
@@ -40,12 +41,21 @@ public class DBZoomAccountService implements ZoomAccountService {
     }
 
     @Override
-    public List<ZoomAccount> findAvailableAccounts(int startTime, int endTime) {
+    public ZoomAccount getAccount(String accountId) {
+        return getAllAccounts().stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
+    }
+
+    @Override
+    public List<ZoomAccount> findAvailableAccounts(LocalTime startTime, LocalTime endTime) {
+        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap();
         return getAllAccounts().stream().filter(zoomAccount -> {
-            for (Booking booking : bookings.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
+            for (Booking booking : accountIdToBookingsMap.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
                 if (
-                        booking.getStartTime() <= startTime && startTime < booking.getEndTime()
-                                || booking.getStartTime() <= endTime && endTime <= booking.getEndTime()) {
+                        booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())
+                                || booking.getStartTime().isBefore(endTime) && endTime.isBefore(booking.getEndTime())
+                                || startTime.isBefore(booking.getStartTime()) && booking.getStartTime().isBefore(endTime)
+                                || startTime.isBefore(booking.getEndTime()) && booking.getEndTime().isBefore(endTime)
+                ) {
                     return false;
                 }
             }
@@ -54,10 +64,32 @@ public class DBZoomAccountService implements ZoomAccountService {
     }
 
     @Override
+    public Map<String, Booking> findActiveBookings() {
+        LocalTime startTime = LocalTime.now(ZoneId.of("-05:00"));
+        Map<String, Booking> result = new HashMap<>();
+        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap();
+        getAllAccounts().forEach(zoomAccount -> {
+            for (Booking booking : accountIdToBookingsMap.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
+                if (booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())) {
+                    result.put(zoomAccount.getAccountId(), booking);
+                }
+            }
+        });
+        return result;
+    }
+
+    @Override
     public void bookAccount(Booking booking) {
-        List<Booking> bookingList = bookings.getOrDefault(booking.getAccountId(), new LinkedList<>());
-        bookingList.add(booking);
-        bookings.put(booking.getAccountId(), bookingList);
+        bookings.add(booking);
+    }
+
+    @Override
+    public void deleteBooking(String bookingId) {
+        bookings.removeIf(booking -> booking.getBookingId().equals(bookingId));
+    }
+
+    private Map<String, List<Booking>> getAccountIdToBookingsMap() {
+        return bookings.stream().collect(Collectors.groupingBy(Booking::getAccountId));
     }
 
 

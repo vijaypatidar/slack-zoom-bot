@@ -1,12 +1,19 @@
 package com.consultadd.slackzoom.slack;
 
 import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
+import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.models.ZoomAccount;
+import com.consultadd.slackzoom.services.ZoomAccountService;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
 import com.slack.api.methods.request.views.ViewsOpenRequest;
+import com.slack.api.model.block.SectionBlock;
+import com.slack.api.model.block.composition.MarkdownTextObject;
+import com.slack.api.model.block.composition.PlainTextObject;
+import com.slack.api.model.block.element.ButtonElement;
 import com.slack.api.model.view.ViewState;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +30,9 @@ import org.springframework.context.annotation.Configuration;
 public class SlackApp implements ApplicationEventPublisherAware {
     private final SlackViews slackViews;
     private final ICDataSource dataSource;
-    private ApplicationEventPublisher applicationEventPublisher;
+    private final ZoomAccountService accountService;
     Logger logger = LoggerFactory.getLogger(SlackApp.class);
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @Bean
     public App initSlackApp(AppConfig config) {
@@ -46,11 +54,12 @@ public class SlackApp implements ApplicationEventPublisherAware {
         app.viewSubmission("find-zoom-account", (req, ctx) -> {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
-            Optional<ZoomAccount> optionalZoomAccount = dataSource.bookAvailableAccount(state, req.getPayload().getUser().getId());
-            if (optionalZoomAccount.isPresent()) {
-                ZoomAccount account = optionalZoomAccount.get();
+            Optional<Booking> optionalBooking = dataSource.bookAvailableAccount(state, req.getPayload().getUser().getId());
+            if (optionalBooking.isPresent()) {
+                Booking booking = optionalBooking.get();
+                ZoomAccount account = accountService.getAccount(booking.getAccountId());
                 String text = String.format(
-                        "You can use this account from %s to %s.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
+                        "You can use this account from %s to %s EST.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
                         state.get("startTime").getSelectedTime(),
                         state.get("endTime").getSelectedTime(),
                         account.getAccountName(),
@@ -63,8 +72,23 @@ public class SlackApp implements ApplicationEventPublisherAware {
                                 msg
                                         .channel(req.getPayload().getUser().getId())
                                         .token(ctx.getBotToken())
-                                        .mrkdwn(true)
-                                        .text(text)
+                                        .blocks(List.of(SectionBlock
+                                                .builder()
+                                                .text(MarkdownTextObject
+                                                        .builder()
+                                                        .text(text)
+                                                        .build())
+                                                .accessory(ButtonElement
+                                                        .builder()
+                                                        .style(SlackViews.DANGER)
+                                                        .text(PlainTextObject
+                                                                .builder()
+                                                                .text("Free Account")
+                                                                .build())
+                                                        .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
+                                                        .value(booking.getBookingId())
+                                                        .build())
+                                                .build()))
                         );
             } else {
                 app.getClient()
@@ -79,10 +103,36 @@ public class SlackApp implements ApplicationEventPublisherAware {
             return ctx.ack();
         });
 
-        app.message(".",(req,ctx)->{
-            logger.info("ON_MESSAGE:{}",ctx.getChannelId());
-           return ctx.ack();
+        app.blockAction(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT, (req, ctx) -> {
+            String bookingId = req.getPayload()
+                    .getActions()
+                    .stream()
+                    .filter(action -> action.getActionId().equals(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT))
+                    .findAny()
+                    .orElseThrow()
+                    .getValue();
+            accountService.deleteBooking(bookingId);
+            applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
+            app.getClient()
+                    .chatPostMessage(builder -> builder
+                            .text("Thank you! Account status has been changed to available.")
+                            .channel(req.getPayload().getUser().getId())
+                            .token(ctx.getBotToken()));
+            return ctx.ack();
         });
+
+        app.blockAction(SlackViews.ACTION_BOOK_ACCOUNT_REQUEST, (req, ctx) -> {
+            app.getClient()
+                    .viewsOpen(ViewsOpenRequest
+                            .builder()
+                            .triggerId(req.getPayload().getTriggerId())
+                            .token(ctx.getBotToken())
+                            .view(slackViews.getZoomRequestModal())
+                            .build()
+                    );
+            return ctx.ack();
+        });
+
         return app;
     }
 

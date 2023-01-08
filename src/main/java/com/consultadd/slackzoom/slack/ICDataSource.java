@@ -7,6 +7,7 @@ import com.consultadd.slackzoom.services.ZoomAccountService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.slack.api.model.view.ViewState;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,10 +46,10 @@ public class ICDataSource {
         );
     }
 
-    public Optional<ZoomAccount> bookAvailableAccount(Map<String, ViewState.Value> state, String userId) throws JsonProcessingException {
+    public Optional<Booking> bookAvailableAccount(Map<String, ViewState.Value> state, String userId) throws JsonProcessingException {
         log.info("ViewState:" + objectMapper.writeValueAsString(state));
-        int startTime = toIntTime(state.get("startTime").getSelectedTime());
-        int endTime = toIntTime(state.get("endTime").getSelectedTime());
+        LocalTime startTime = LocalTime.parse(state.get("startTime").getSelectedTime());
+        LocalTime endTime = LocalTime.parse(state.get("endTime").getSelectedTime());
         List<ZoomAccount> availableAccounts = zoomAccountService.findAvailableAccounts(startTime, endTime);
         if (availableAccounts.isEmpty()) {
             return Optional.empty();
@@ -56,7 +57,7 @@ public class ICDataSource {
             ZoomAccount account = availableAccounts.get(0);
             Booking booking = new Booking(startTime, endTime, userId, UUID.randomUUID().toString(), account.getAccountId());
             zoomAccountService.bookAccount(booking);
-            return Optional.of(account);
+            return Optional.of(booking);
         }
     }
 

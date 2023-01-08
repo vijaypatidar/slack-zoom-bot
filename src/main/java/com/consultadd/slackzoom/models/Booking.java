@@ -1,5 +1,6 @@
 package com.consultadd.slackzoom.models;
 
+import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,8 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Booking {
-    int startTime;
-    int endTime;
+    LocalTime startTime;
+    LocalTime endTime;
     String userId;
     String bookingId;
     String accountId;
