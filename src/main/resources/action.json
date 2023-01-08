@@ -1,0 +1,106 @@
+{
+  "type": "modal",
+  "callback_id": "find-zoom-account",
+  "title": {
+    "type": "plain_text",
+    "text": "Zoom pro account",
+    "emoji": true
+  },
+  "submit": {
+    "type": "plain_text",
+    "text": "Submit",
+    "emoji": true
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Cancel",
+    "emoji": true
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Please select the duration for which you need pro zoom account."
+      }
+    },
+    {
+      "type": "input",
+      "element": {
+        "type": "timepicker",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Select start time",
+          "emoji": true
+        },
+        "action_id": "startTime"
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Start time",
+        "emoji": true
+      }
+    },
+    {
+      "type": "input",
+      "element": {
+        "type": "timepicker",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Select end time",
+          "emoji": true
+        },
+        "action_id": "endTime"
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "End time",
+        "emoji": true
+      }
+    },
+    {
+      "type": "input",
+      "optional": true,
+      "element": {
+        "type": "multi_static_select",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Select zoom account",
+          "emoji": true
+        },
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Suhas zoom account",
+              "emoji": true
+            },
+            "value": "ac-3"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Pragati's zoom account",
+              "emoji": true
+            },
+            "value": "ac-2"
+          },
+          {
+            "text": {
+              "type": "plain_text",
+              "text": "Vijay's zoom account",
+              "emoji": true
+            },
+            "value": "ac-1"
+          }
+        ],
+        "action_id": "preferred_accounts"
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Preferred zoom account",
+        "emoji": true
+      }
+    }
+  ]
+}
