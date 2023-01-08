@@ -14,6 +14,8 @@ public interface ZoomAccountService {
 
     Map<String, Booking> findActiveBookings();
 
+    Map<String, Booking> findActiveBookings();
+
     void bookAccount(Booking booking);
 
     void deleteBooking(String bookingId);
