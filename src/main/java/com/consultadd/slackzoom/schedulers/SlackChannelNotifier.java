@@ -21,12 +21,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class SlackChannelNotifier implements ApplicationListener<ApplicationEvent> {
-    private ChatPostMessageResponse response = null;
     private final ICDataSource dataSource;
     private final App app;
     private final AppConfig config;
     private final SlackViews slackViews;
-    private String CHANNEL_ID = "C04HYPHLH25";
+    private final String CHANNEL_ID = "C04HYPHLH25";
+    private ChatPostMessageResponse response = null;
 
     @Scheduled(initialDelay = 5000, fixedDelay = 10000)
     public void updateChannel() throws SlackApiException, IOException {
@@ -35,14 +35,14 @@ public class SlackChannelNotifier implements ApplicationListener<ApplicationEven
                     .blocks(slackViews.getAccountStatus())
                     .token(config.getSingleTeamBotToken()));
             this.response = chatPostMessageResponse;
-            log.error("ChatPostMessageResponse:{}",chatPostMessageResponse);
+            log.error("ChatPostMessageResponse:{}", chatPostMessageResponse);
         } else {
             ChatUpdateResponse chatUpdateResponse = app.getClient().chatUpdate(ChatUpdateRequest.builder()
                     .channel(CHANNEL_ID)
                     .ts(this.response.getTs())
                     .blocks(slackViews.getAccountStatus())
                     .token(config.getSingleTeamBotToken()).build());
-            log.error("ChatUpdateResponse:{}",chatUpdateResponse);
+            log.error("ChatUpdateResponse:{}", chatUpdateResponse);
         }
     }
 

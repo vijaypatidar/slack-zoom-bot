@@ -1,6 +1,6 @@
 package com.consultadd.slackzoom.slack;
 
-import com.consultadd.slackzoom.models.ZoomAccount;
+import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.services.ZoomAccountService;
 import com.slack.api.model.block.DividerBlock;
 import com.slack.api.model.block.InputBlock;
@@ -18,9 +18,10 @@ import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -139,13 +140,8 @@ public class SlackViews {
 
         blocks.add(DividerBlock.builder().build());
 
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
-        int start = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE);
-        Set<String> availableAccounts = accountService
-                .findAvailableAccounts(start, start)
-                .stream()
-                .map(ZoomAccount::getAccountId)
-                .collect(Collectors.toSet());
+        Map<String, Booking> activeBookings = accountService.findActiveBookings();
+
         AtomicInteger count = new AtomicInteger(1);
         accountService.getAllAccounts().forEach(zoomAccount -> {
             SectionBlock.SectionBlockBuilder builder = SectionBlock.builder();
@@ -156,7 +152,8 @@ public class SlackViews {
                     .append(".` *")
                     .append(zoomAccount.getAccountName())
                     .append("*\n");
-            if (availableAccounts.contains(zoomAccount.getAccountId())) {
+            Booking booking = activeBookings.get(zoomAccount.getAccountId());
+            if (booking == null) {
                 textBuilder.append("Available");
                 builder = builder.accessory(ButtonElement
                         .builder()
@@ -165,7 +162,14 @@ public class SlackViews {
                         .style("primary")
                         .build());
             } else {
-                textBuilder.append("In use");
+                textBuilder
+                        .append("This account is in use by <@")
+                        .append(booking.getUserId())
+                        .append("> until ")
+                        .append(booking.getEndTime() / 60)
+                        .append(":")
+                        .append(booking.getEndTime() % 60)
+                        .append(" EST.");
             }
             builder = builder.text(MarkdownTextObject
                     .builder()

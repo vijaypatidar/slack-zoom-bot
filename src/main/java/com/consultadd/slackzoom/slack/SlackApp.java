@@ -23,8 +23,8 @@ import org.springframework.context.annotation.Configuration;
 public class SlackApp implements ApplicationEventPublisherAware {
     private final SlackViews slackViews;
     private final ICDataSource dataSource;
-    private ApplicationEventPublisher applicationEventPublisher;
     Logger logger = LoggerFactory.getLogger(SlackApp.class);
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @Bean
     public App initSlackApp(AppConfig config) {
@@ -79,9 +79,9 @@ public class SlackApp implements ApplicationEventPublisherAware {
             return ctx.ack();
         });
 
-        app.message(".",(req,ctx)->{
-            logger.info("ON_MESSAGE:{}",ctx.getChannelId());
-           return ctx.ack();
+        app.message(".", (req, ctx) -> {
+            logger.info("ON_MESSAGE:{}", ctx.getChannelId());
+            return ctx.ack();
         });
         return app;
     }

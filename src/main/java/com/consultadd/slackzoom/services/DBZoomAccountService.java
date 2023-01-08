@@ -2,10 +2,7 @@ package com.consultadd.slackzoom.services;
 
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.models.ZoomAccount;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,11 +14,9 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 @RequiredArgsConstructor
 @Slf4j
 public class DBZoomAccountService implements ZoomAccountService {
-    Map<String, List<Booking>> bookings = new HashMap<>();
-
-    private String accountsTable = "slack-bot-zoom-accounts";
-
     private final DynamoDbClient dynamoDbClient;
+    Map<String, List<Booking>> bookings = new HashMap<>();
+    private final String accountsTable = "slack-bot-zoom-accounts";
 
     @Override
     public List<ZoomAccount> getAllAccounts() {
@@ -51,6 +46,23 @@ public class DBZoomAccountService implements ZoomAccountService {
             }
             return true;
         }).toList();
+    }
+
+    @Override
+    public Map<String, Booking> findActiveBookings() {
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
+        int startTime = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE);
+        Map<String, Booking> result = new HashMap<>();
+        getAllAccounts().forEach(zoomAccount -> {
+            for (Booking booking : bookings.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
+                if (
+                        booking.getStartTime() <= startTime && startTime < booking.getEndTime()
+                                || booking.getStartTime() <= startTime && startTime <= booking.getEndTime()) {
+                    result.put(zoomAccount.getAccountId(), booking);
+                }
+            }
+        });
+        return result;
     }
 
     @Override

@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 public class AWSConfiguration {
 
     private final Region AWS_REGION = Region.AP_SOUTH_1;
+
     @Bean
     public AwsCredentialsProvider awsCredentialsProvider() {
         return DefaultCredentialsProvider.create();
