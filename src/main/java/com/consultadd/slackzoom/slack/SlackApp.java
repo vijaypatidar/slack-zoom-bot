@@ -1,5 +1,6 @@
 package com.consultadd.slackzoom.slack;
 
+import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
 import com.consultadd.slackzoom.models.ZoomAccount;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
@@ -9,16 +10,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @RequiredArgsConstructor
-public class SlackApp {
-    private final UIComponent uiComponent;
+public class SlackApp implements ApplicationEventPublisherAware {
+    private final SlackViews slackViews;
     private final ICDataSource dataSource;
+    private ApplicationEventPublisher applicationEventPublisher;
     Logger logger = LoggerFactory.getLogger(SlackApp.class);
 
     @Bean
@@ -31,7 +36,7 @@ public class SlackApp {
                             .builder()
                             .triggerId(req.getPayload().getTriggerId())
                             .token(ctx.getBotToken())
-                            .view(uiComponent.getZoomRequestModal())
+                            .view(slackViews.getZoomRequestModal())
                             .build()
                     );
             return ctx.ack();
@@ -52,6 +57,7 @@ public class SlackApp {
                         account.getUsername(),
                         account.getPassword()
                 );
+                this.applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
                 app.getClient()
                         .chatPostMessage(msg ->
                                 msg
@@ -73,6 +79,10 @@ public class SlackApp {
             return ctx.ack();
         });
 
+        app.message(".",(req,ctx)->{
+            logger.info("ON_MESSAGE:{}",ctx.getChannelId());
+           return ctx.ack();
+        });
         return app;
     }
 
@@ -82,5 +92,10 @@ public class SlackApp {
                 .singleTeamBotToken(System.getenv("SLACK_BOT_TOKEN"))
                 .signingSecret(System.getenv("SLACK_SIGNING_SECRET"))
                 .build();
+    }
+
+    @Override
+    public void setApplicationEventPublisher(@NotNull ApplicationEventPublisher applicationEventPublisher) {
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 }

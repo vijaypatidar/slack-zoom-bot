@@ -6,39 +6,42 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class DBZoomAccountService implements ZoomAccountService {
-    List<ZoomAccount> zoomAccounts = new LinkedList<>();
     Map<String, List<Booking>> bookings = new HashMap<>();
 
-    public DBZoomAccountService() {
-        zoomAccounts.add(ZoomAccount.builder()
-                .accountName("Vijay's zoom account")
-                .username("user1")
-                .password("123456780")
-                .accountId("ac-1").build());
-        zoomAccounts.add(ZoomAccount.builder()
-                .accountName("Pragati's zoom account")
-                .username("user2")
-                .password("12345678")
-                .accountId("ac-2").build());
-        zoomAccounts.add(ZoomAccount.builder()
-                .accountName("Suhas's zoom account")
-                .username("user3")
-                .password("12345678")
-                .accountId("ac-3").build());
-    }
+    private String accountsTable = "slack-bot-zoom-accounts";
+
+    private final DynamoDbClient dynamoDbClient;
 
     @Override
     public List<ZoomAccount> getAllAccounts() {
-        return zoomAccounts;
+        try {
+            ScanResponse scanResponse = dynamoDbClient.scan(ScanRequest.builder()
+                    .tableName(accountsTable).build());
+            return scanResponse
+                    .items()
+                    .stream()
+                    .map(ZoomAccount::toZoomAccount)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error scanning accounts table", e);
+            return List.of();
+        }
     }
 
     @Override
     public List<ZoomAccount> findAvailableAccounts(int startTime, int endTime) {
-        return zoomAccounts.stream().filter(zoomAccount -> {
+        return getAllAccounts().stream().filter(zoomAccount -> {
             for (Booking booking : bookings.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
                 if (
                         booking.getStartTime() <= startTime && startTime < booking.getEndTime()

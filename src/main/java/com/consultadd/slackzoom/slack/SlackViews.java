@@ -1,11 +1,15 @@
 package com.consultadd.slackzoom.slack;
 
+import com.consultadd.slackzoom.models.ZoomAccount;
 import com.consultadd.slackzoom.services.ZoomAccountService;
+import com.slack.api.model.block.DividerBlock;
 import com.slack.api.model.block.InputBlock;
 import com.slack.api.model.block.LayoutBlock;
 import com.slack.api.model.block.SectionBlock;
+import com.slack.api.model.block.composition.MarkdownTextObject;
 import com.slack.api.model.block.composition.OptionObject;
 import com.slack.api.model.block.composition.PlainTextObject;
+import com.slack.api.model.block.element.ButtonElement;
 import com.slack.api.model.block.element.MultiStaticSelectElement;
 import com.slack.api.model.block.element.TimePickerElement;
 import com.slack.api.model.view.View;
@@ -14,17 +18,21 @@ import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
-public class UIComponent {
+public class SlackViews {
     public final static String MODAL_VIEW = "modal";
     public final static String PLAIN_TEXT = "plain_text";
+    public final static String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
 
     private final ZoomAccountService accountService;
 
@@ -111,12 +119,62 @@ public class UIComponent {
 
         return View.builder()
                 .type(MODAL_VIEW)
-                .callbackId("find-zoom-account")
+                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK)
                 .title(title)
                 .submit(submit)
                 .close(close)
                 .blocks(blocks)
                 .build();
+    }
+
+    public List<LayoutBlock> getAccountStatus() {
+        List<LayoutBlock> blocks = new LinkedList<>();
+        blocks.add(SectionBlock
+                .builder()
+                .text(PlainTextObject
+                        .builder()
+                        .text("Zoom accounts status")
+                        .build())
+                .build());
+
+        blocks.add(DividerBlock.builder().build());
+
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
+        int start = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE);
+        Set<String> availableAccounts = accountService
+                .findAvailableAccounts(start, start)
+                .stream()
+                .map(ZoomAccount::getAccountId)
+                .collect(Collectors.toSet());
+        AtomicInteger count = new AtomicInteger(1);
+        accountService.getAllAccounts().forEach(zoomAccount -> {
+            SectionBlock.SectionBlockBuilder builder = SectionBlock.builder();
+            StringBuilder textBuilder = new StringBuilder();
+            textBuilder
+                    .append("`")
+                    .append(count.getAndIncrement())
+                    .append(".` *")
+                    .append(zoomAccount.getAccountName())
+                    .append("*\n");
+            if (availableAccounts.contains(zoomAccount.getAccountId())) {
+                textBuilder.append("Available");
+                builder = builder.accessory(ButtonElement
+                        .builder()
+                        .actionId("use_account-" + zoomAccount.getAccountId())
+                        .text(PlainTextObject.builder().text("USE").build())
+                        .style("primary")
+                        .build());
+            } else {
+                textBuilder.append("In use");
+            }
+            builder = builder.text(MarkdownTextObject
+                    .builder()
+                    .text(textBuilder.toString())
+                    .build());
+            blocks.add(builder.build());
+        });
+
+        return blocks;
     }
 
     @Deprecated
