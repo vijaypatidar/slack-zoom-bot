@@ -29,7 +29,7 @@ public class ZoomBootEventListener implements ApplicationListener<ApplicationEve
     String botUpdateChannelId;
     private ChatPostMessageResponse response = null;
 
-    @Scheduled(initialDelay = 5000, fixedDelay = 10000)
+    @Scheduled(initialDelay = 5000, fixedDelay = 20000)
     public void updateChannel() throws SlackApiException, IOException {
         if (response == null) {
             ChatPostMessageResponse chatPostMessageResponse = app.getClient()
