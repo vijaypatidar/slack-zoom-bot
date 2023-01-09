@@ -14,10 +14,7 @@ import com.slack.api.model.view.View;
 import com.slack.api.model.view.ViewClose;
 import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -170,6 +167,7 @@ public class SlackViews {
                     .ofNullable(accountIdToBookingMap.get(zoomAccount.getAccountId()))
                     .ifPresent(bookings -> {
                         String uses = bookings.stream()
+                                .sorted(Comparator.comparing(Booking::getStartTime))
                                 .map(b -> TimeUtils.timeToString(b.getStartTime()) + " - " + TimeUtils.timeToString(b.getEndTime()) + "\t<@" + b.getUserId() + ">")
                                 .reduce((a, b) -> a + "\n" + b)
                                 .orElse("");
