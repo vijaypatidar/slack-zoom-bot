@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 @Component
 public class AWSConfiguration {
 
-    private final Region AWS_REGION = Region.AP_SOUTH_1;
+    private static final Region AWS_REGION = Region.AP_SOUTH_1;
 
     @Bean
     public AwsCredentialsProvider awsCredentialsProvider() {
