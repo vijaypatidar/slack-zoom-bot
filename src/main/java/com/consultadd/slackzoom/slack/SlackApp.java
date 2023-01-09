@@ -7,6 +7,7 @@ import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.AccountType;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
+import com.slack.api.bolt.handler.builtin.ViewSubmissionHandler;
 import com.slack.api.methods.request.views.ViewsOpenRequest;
 import com.slack.api.model.block.SectionBlock;
 import com.slack.api.model.block.composition.MarkdownTextObject;
@@ -51,58 +52,10 @@ public class SlackApp implements ApplicationEventPublisherAware {
         app.blockAction(".Time", (req, context) -> context.ack());
 
         for (AccountType accountType : AccountType.values()) {
-            app.viewSubmission(SlackViews.SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + ":" + accountType.getType(), (req, ctx) -> {
-                Map<String, ViewState.Value> state = new HashMap<>();
-                req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
-                Optional<Booking> optionalBooking = accountService.bookAvailableAccount(state, req.getPayload().getUser().getId(), accountType);
-                if (optionalBooking.isPresent()) {
-                    Booking booking = optionalBooking.get();
-                    Account account = accountService.getAccount(booking.getAccountId(), accountType);
-                    String text = String.format(
-                            "You can use this account from %s to %s EST.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
-                            state.get("startTime").getSelectedTime(),
-                            state.get("endTime").getSelectedTime(),
-                            account.getAccountName(),
-                            account.getUsername(),
-                            account.getPassword()
-                    );
-                    this.applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
-                    app.getClient()
-                            .chatPostMessage(msg ->
-                                    msg
-                                            .channel(req.getPayload().getUser().getId())
-                                            .token(ctx.getBotToken())
-                                            .blocks(List.of(SectionBlock
-                                                    .builder()
-                                                    .text(MarkdownTextObject
-                                                            .builder()
-                                                            .text(text)
-                                                            .build())
-                                                    .accessory(ButtonElement
-                                                            .builder()
-                                                            .style(SlackViews.DANGER)
-                                                            .text(PlainTextObject
-                                                                    .builder()
-                                                                    .text("Free Account")
-                                                                    .build())
-                                                            .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
-                                                            .value(booking.getBookingId())
-                                                            .build())
-                                                    .build()))
-                            );
-                } else {
-                    app.getClient()
-                            .chatPostMessage(msg ->
-                                    msg
-                                            .channel(req.getPayload().getUser().getId())
-                                            .token(ctx.getBotToken())
-                                            .mrkdwn(true)
-                                            .text("All accounts are in use for selected time frame.")
-                            );
-                }
-                return ctx.ack();
-            });
-
+            app.viewSubmission(
+                    SlackViews.SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + ":" + accountType.getType(),
+                    handleAccountRequestViewSubmission(app, accountType)
+            );
         }
 
         app.blockAction(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT, (req, ctx) -> {
@@ -143,6 +96,61 @@ public class SlackApp implements ApplicationEventPublisherAware {
         });
 
         return app;
+    }
+
+    @NotNull
+    private ViewSubmissionHandler handleAccountRequestViewSubmission(App app, AccountType accountType) {
+        return (req, ctx) -> {
+            Map<String, ViewState.Value> state = new HashMap<>();
+            req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
+            Optional<Booking> optionalBooking = accountService.bookAvailableAccount(state, req.getPayload().getUser().getId(), accountType);
+            if (optionalBooking.isPresent()) {
+                Booking booking = optionalBooking.get();
+                Account account = accountService.getAccount(booking.getAccountId(), accountType);
+                String text = String.format(
+                        "You can use this account from %s to %s EST.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
+                        state.get("startTime").getSelectedTime(),
+                        state.get("endTime").getSelectedTime(),
+                        account.getAccountName(),
+                        account.getUsername(),
+                        account.getPassword()
+                );
+                this.applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
+                app.getClient()
+                        .chatPostMessage(msg ->
+                                msg
+                                        .channel(req.getPayload().getUser().getId())
+                                        .token(ctx.getBotToken())
+                                        .blocks(List.of(SectionBlock
+                                                .builder()
+                                                .text(MarkdownTextObject
+                                                        .builder()
+                                                        .text(text)
+                                                        .build())
+                                                .accessory(ButtonElement
+                                                        .builder()
+                                                        .style(SlackViews.DANGER)
+                                                        .text(PlainTextObject
+                                                                .builder()
+                                                                .text("Free Account")
+                                                                .build())
+                                                        .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
+                                                        .value(booking.getBookingId())
+                                                        .build())
+                                                .build()))
+                        );
+            } else {
+                app.getClient()
+                        .chatPostMessage(msg ->
+                                msg
+                                        .channel(req.getPayload().getUser().getId())
+                                        .token(ctx.getBotToken())
+                                        .mrkdwn(true)
+                                        .text("All accounts are in use for selected time frame.")
+                        );
+            }
+            return ctx.ack();
+        };
     }
 
     @Bean

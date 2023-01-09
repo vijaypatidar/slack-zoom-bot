@@ -1,12 +1,12 @@
 package com.consultadd.slackzoom.services;
 
 public enum AccountType {
-    ZOOM("ZOOM","Zoom Account"),
-    GV("GV","Google voice");
+    ZOOM("ZOOM", "Zoom Account"),
+    GV("GV", "Google voice");
     private final String displayName;
     private final String type;
 
-    private AccountType(String type,String displayName){
+    AccountType(String type, String displayName) {
         this.displayName = displayName;
         this.type = type;
     }

@@ -6,11 +6,11 @@ import java.time.format.DateTimeFormatter;
 
 public class TimeUtils {
 
-    private TimeUtils() {
-    }
-
     private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
             .withZone(ZoneId.of("-05:00"));
+
+    private TimeUtils() {
+    }
 
     public static String timeToString(LocalTime time) {
         return time.format(timeFormatter);

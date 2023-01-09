@@ -6,10 +6,8 @@ import com.consultadd.slackzoom.services.AccountType;
 import com.consultadd.slackzoom.utils.TimeUtils;
 import com.slack.api.model.block.*;
 import com.slack.api.model.block.composition.MarkdownTextObject;
-import com.slack.api.model.block.composition.OptionObject;
 import com.slack.api.model.block.composition.PlainTextObject;
 import com.slack.api.model.block.element.ButtonElement;
-import com.slack.api.model.block.element.MultiStaticSelectElement;
 import com.slack.api.model.block.element.TimePickerElement;
 import com.slack.api.model.view.View;
 import com.slack.api.model.view.ViewClose;
@@ -53,7 +51,7 @@ public class SlackViews {
 
         blocks.add(SectionBlock.builder()
                 .text(PlainTextObject.builder()
-                        .text("Please select the duration for which you need "+accountType.getDisplayName()+".")
+                        .text("Please select the duration for which you need " + accountType.getDisplayName() + ".")
                         .build())
                 .build());
 
@@ -87,38 +85,9 @@ public class SlackViews {
                         .build())
                 .build());
 
-//        List<OptionObject> options = accountService.getAllAccounts(accountType)
-//                .stream()
-//                .map(zoomAccount -> OptionObject
-//                        .builder()
-//                        .value(zoomAccount.getAccountId())
-//                        .text(PlainTextObject
-//                                .builder()
-//                                .text(zoomAccount.getAccountName())
-//                                .build())
-//                        .build())
-//                .toList();
-
-//        blocks.add(InputBlock.builder()
-//                .optional(true)
-//                .element(MultiStaticSelectElement
-//                        .builder()
-//                        .actionId("preferred_accounts")
-//                        .placeholder(PlainTextObject
-//                                .builder()
-//                                .text("Select zoom account")
-//                                .build())
-//                        .options(options)
-//                        .build())
-//                .label(PlainTextObject
-//                        .builder()
-//                        .text("Preferred zoom account")
-//                        .build())
-//                .build());
-
         return View.builder()
                 .type(MODAL_VIEW)
-                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK+":"+accountType.getType())
+                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + ":" + accountType.getType())
                 .title(title)
                 .submit(submit)
                 .close(close)
