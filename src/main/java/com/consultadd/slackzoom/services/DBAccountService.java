@@ -1,7 +1,7 @@
 package com.consultadd.slackzoom.services;
 
 import com.consultadd.slackzoom.models.Booking;
-import com.consultadd.slackzoom.models.ZoomAccount;
+import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.utils.TimeUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.slack.api.model.view.ViewState;
@@ -20,21 +20,26 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DBZoomAccountService implements ZoomAccountService {
+public class DBAccountService implements AccountService {
     private final DynamoDbClient dynamoDbClient;
     private final ObjectMapper objectMapper;
     List<Booking> bookings = new LinkedList<>();
     private final String accountsTable = "slack-bot-zoom-accounts";
 
     @Override
-    public List<ZoomAccount> getAllAccounts() {
+    public List<Account> getAllAccounts(AccountType accountType) {
         try {
+            String matchAccountType = "accountType = :accountType";
+            Map<String, AttributeValue> filters = new HashMap<>();
+            filters.put(":accountType",  AttributeValue.builder().s(accountType.getType()).build());
             ScanResponse scanResponse = dynamoDbClient.scan(ScanRequest.builder()
+                            .filterExpression(matchAccountType)
+                            .expressionAttributeValues(filters)
                     .tableName(accountsTable).build());
             return scanResponse
                     .items()
                     .stream()
-                    .map(ZoomAccount::toZoomAccount)
+                    .map(Account::toZoomAccount)
                     .toList();
         } catch (Exception e) {
             log.error("Error scanning accounts table", e);
@@ -43,15 +48,15 @@ public class DBZoomAccountService implements ZoomAccountService {
     }
 
     @Override
-    public ZoomAccount getAccount(String accountId) {
-        return getAllAccounts().stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
+    public Account getAccount(String accountId,AccountType accountType) {
+        return getAllAccounts(accountType).stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
     }
 
     @Override
-    public List<ZoomAccount> findAvailableAccounts(LocalTime startTime, LocalTime endTime) {
+    public List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime,AccountType accountType) {
         Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap();
-        return getAllAccounts().stream().filter(zoomAccount -> {
-            for (Booking booking : accountIdToBookingsMap.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
+        return getAllAccounts(accountType).stream().filter(account -> {
+            for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
                 if (
                         booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())
                                 || booking.getStartTime().isBefore(endTime) && endTime.isBefore(booking.getEndTime())
@@ -66,14 +71,14 @@ public class DBZoomAccountService implements ZoomAccountService {
     }
 
     @Override
-    public Map<String, Booking> findActiveBookings() {
+    public Map<String, Booking> findActiveBookings(AccountType accountType) {
         LocalTime startTime = LocalTime.now(ZoneId.of("-05:00"));
         Map<String, Booking> result = new HashMap<>();
         Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap();
-        getAllAccounts().forEach(zoomAccount -> {
-            for (Booking booking : accountIdToBookingsMap.getOrDefault(zoomAccount.getAccountId(), new LinkedList<>())) {
+        getAllAccounts(accountType).forEach(account -> {
+            for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
                 if (booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())) {
-                    result.put(zoomAccount.getAccountId(), booking);
+                    result.put(account.getAccountId(), booking);
                 }
             }
         });
@@ -81,7 +86,7 @@ public class DBZoomAccountService implements ZoomAccountService {
     }
 
     @Override
-    public Map<String, List<Booking>> findBookings() {
+    public Map<String, List<Booking>> findBookings(AccountType accountType) {
         return bookings.stream().collect(Collectors.groupingBy(Booking::getAccountId));
     }
 
@@ -95,15 +100,15 @@ public class DBZoomAccountService implements ZoomAccountService {
         bookings.removeIf(booking -> booking.getBookingId().equals(bookingId));
     }
 
-    public Optional<Booking> bookAvailableAccount(Map<String, ViewState.Value> state, String userId) {
+    public Optional<Booking> bookAvailableAccount(Map<String, ViewState.Value> state, String userId,AccountType accountType) {
         log.info("ViewState:" + state);
         LocalTime startTime = LocalTime.parse(state.get("startTime").getSelectedTime());
         LocalTime endTime = LocalTime.parse(state.get("endTime").getSelectedTime());
-        List<ZoomAccount> availableAccounts = findAvailableAccounts(startTime, endTime);
+        List<Account> availableAccounts = findAvailableAccounts(startTime, endTime,accountType);
         if (availableAccounts.isEmpty()) {
             return Optional.empty();
         } else {
-            ZoomAccount account = availableAccounts.get(0);
+            Account account = availableAccounts.get(0);
             Booking booking = new Booking(startTime, endTime, userId, UUID.randomUUID().toString(), account.getAccountId());
             bookAccount(booking);
             return Optional.of(booking);

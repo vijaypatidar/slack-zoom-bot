@@ -1,7 +1,8 @@
 package com.consultadd.slackzoom.slack;
 
 import com.consultadd.slackzoom.models.Booking;
-import com.consultadd.slackzoom.services.ZoomAccountService;
+import com.consultadd.slackzoom.services.AccountService;
+import com.consultadd.slackzoom.services.AccountType;
 import com.consultadd.slackzoom.utils.TimeUtils;
 import com.slack.api.model.block.*;
 import com.slack.api.model.block.composition.MarkdownTextObject;
@@ -16,6 +17,7 @@ import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,12 +33,12 @@ public class SlackViews {
     public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "ACTION_RELEASE_BOOKED_ACCOUNT";
     public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
 
-    private final ZoomAccountService accountService;
+    private final AccountService accountService;
 
-    public View getZoomRequestModal() {
+    public View getRequestModal(AccountType accountType) {
         ViewTitle title = ViewTitle.builder()
                 .type(PLAIN_TEXT)
-                .text("Zoom pro account")
+                .text(accountType.getDisplayName())
                 .build();
         ViewSubmit submit = ViewSubmit.builder()
                 .type(PLAIN_TEXT)
@@ -51,7 +53,7 @@ public class SlackViews {
 
         blocks.add(SectionBlock.builder()
                 .text(PlainTextObject.builder()
-                        .text("Please select the duration for which you need pro zoom account.")
+                        .text("Please select the duration for which you need "+accountType.getDisplayName()+".")
                         .build())
                 .build());
 
@@ -85,38 +87,38 @@ public class SlackViews {
                         .build())
                 .build());
 
-        List<OptionObject> options = accountService.getAllAccounts()
-                .stream()
-                .map(zoomAccount -> OptionObject
-                        .builder()
-                        .value(zoomAccount.getAccountId())
-                        .text(PlainTextObject
-                                .builder()
-                                .text(zoomAccount.getAccountName())
-                                .build())
-                        .build())
-                .toList();
+//        List<OptionObject> options = accountService.getAllAccounts(accountType)
+//                .stream()
+//                .map(zoomAccount -> OptionObject
+//                        .builder()
+//                        .value(zoomAccount.getAccountId())
+//                        .text(PlainTextObject
+//                                .builder()
+//                                .text(zoomAccount.getAccountName())
+//                                .build())
+//                        .build())
+//                .toList();
 
-        blocks.add(InputBlock.builder()
-                .optional(true)
-                .element(MultiStaticSelectElement
-                        .builder()
-                        .actionId("preferred_accounts")
-                        .placeholder(PlainTextObject
-                                .builder()
-                                .text("Select zoom account")
-                                .build())
-                        .options(options)
-                        .build())
-                .label(PlainTextObject
-                        .builder()
-                        .text("Preferred zoom account")
-                        .build())
-                .build());
+//        blocks.add(InputBlock.builder()
+//                .optional(true)
+//                .element(MultiStaticSelectElement
+//                        .builder()
+//                        .actionId("preferred_accounts")
+//                        .placeholder(PlainTextObject
+//                                .builder()
+//                                .text("Select zoom account")
+//                                .build())
+//                        .options(options)
+//                        .build())
+//                .label(PlainTextObject
+//                        .builder()
+//                        .text("Preferred zoom account")
+//                        .build())
+//                .build());
 
         return View.builder()
                 .type(MODAL_VIEW)
-                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK)
+                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK+":"+accountType.getType())
                 .title(title)
                 .submit(submit)
                 .close(close)
@@ -130,17 +132,38 @@ public class SlackViews {
                 .builder()
                 .text(MarkdownTextObject
                         .builder()
-                        .text("*Zoom accounts status*")
+                        .text("*Accounts status*")
+                        .build())
+                .build());
+        blocks.addAll(Stream
+                .of(AccountType.ZOOM, AccountType.GV)
+                .map(this::getAccountStatus)
+                .filter(b -> b.size() > 2)
+                .reduce((l1, l2) -> {
+                    List<LayoutBlock> merge = new LinkedList<>();
+                    merge.addAll(l1);
+                    merge.add(DividerBlock.builder().build());
+                    merge.addAll(l2);
+                    return merge;
+                }).orElse(List.of()));
+        return blocks;
+    }
+
+    private List<LayoutBlock> getAccountStatus(AccountType accountType) {
+        List<LayoutBlock> blocks = new LinkedList<>();
+        blocks.add(SectionBlock
+                .builder()
+                .text(MarkdownTextObject
+                        .builder()
+                        .text("*" + accountType.getDisplayName() + "*")
                         .build())
                 .build());
 
-        blocks.add(DividerBlock.builder().build());
-
-        Map<String, Booking> activeBookings = accountService.findActiveBookings();
-        Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings();
+        Map<String, Booking> activeBookings = accountService.findActiveBookings(accountType);
+        Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings(accountType);
 
         AtomicInteger count = new AtomicInteger(1);
-        accountService.getAllAccounts().forEach(zoomAccount -> {
+        accountService.getAllAccounts(accountType).forEach(zoomAccount -> {
             Booking booking = activeBookings.get(zoomAccount.getAccountId());
             blocks.add(SectionBlock
                     .builder()
@@ -189,6 +212,7 @@ public class SlackViews {
                 .elements(List.of(ButtonElement
                         .builder()
                         .actionId(ACTION_BOOK_ACCOUNT_REQUEST)
+                        .value(accountType.getType())
                         .style("primary")
                         .text(PlainTextObject
                                 .builder()
