@@ -14,24 +14,22 @@ import com.slack.api.model.view.View;
 import com.slack.api.model.view.ViewClose;
 import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
-import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class SlackViews {
-    public final static String MODAL_VIEW = "modal";
-    public final static String PLAIN_TEXT = "plain_text";
-    public final static String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
+    public static final String MODAL_VIEW = "modal";
+    public static final String PLAIN_TEXT = "plain_text";
+    public static final String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
     public static final String DANGER = "danger";
     public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "release_booked_account";
     public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
@@ -142,6 +140,7 @@ public class SlackViews {
         blocks.add(DividerBlock.builder().build());
 
         Map<String, Booking> activeBookings = accountService.findActiveBookings();
+        Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings();
 
         AtomicInteger count = new AtomicInteger(1);
         accountService.getAllAccounts().forEach(zoomAccount -> {
@@ -166,37 +165,39 @@ public class SlackViews {
                                 .build()))
                         .build());
             }
+
+            Optional
+                    .ofNullable(accountIdToBookingMap.get(zoomAccount.getAccountId()))
+                    .ifPresent(bookings -> {
+                        String uses = bookings.stream()
+                                .map(b -> TimeUtils.timeToString(b.getStartTime()) + " - " + TimeUtils.timeToString(b.getEndTime()) + "\t<@" + b.getUserId() + ">")
+                                .reduce((a, b) -> a + "\n" + b)
+                                .orElse("");
+
+                        blocks.add(ContextBlock
+                                .builder()
+                                .elements(List.of(MarkdownTextObject
+                                        .builder()
+                                        .text(uses)
+                                        .build()))
+                                .build());
+                    });
+
+
         });
 
         blocks.add(ActionsBlock
                 .builder()
                 .elements(List.of(ButtonElement
                         .builder()
-                                .actionId(ACTION_BOOK_ACCOUNT_REQUEST)
-                                .style("primary")
-                                .text(PlainTextObject
-                                        .builder()
-                                        .text("Need account")
-                                        .build())
+                        .actionId(ACTION_BOOK_ACCOUNT_REQUEST)
+                        .style("primary")
+                        .text(PlainTextObject
+                                .builder()
+                                .text("Need account")
+                                .build())
                         .build()))
                 .build());
         return blocks;
-    }
-
-    @Deprecated
-    public String getModal() {
-        try {
-            ClassPathResource json = new ClassPathResource("action.json");
-            BufferedInputStream bis = new BufferedInputStream(json.getInputStream());
-            StringBuilder sb = new StringBuilder();
-            byte[] bytes = new byte[1024];
-            int read = -1;
-            while ((read = bis.read(bytes)) > 0) {
-                sb.append(new String(bytes, 0, read));
-            }
-            return sb.toString();
-        } catch (IOException e) {
-            return null;
-        }
     }
 }

@@ -29,7 +29,6 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class SlackApp implements ApplicationEventPublisherAware {
     private final SlackViews slackViews;
-    private final ICDataSource dataSource;
     private final ZoomAccountService accountService;
     Logger logger = LoggerFactory.getLogger(SlackApp.class);
     private ApplicationEventPublisher applicationEventPublisher;
@@ -54,7 +53,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
         app.viewSubmission("find-zoom-account", (req, ctx) -> {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
-            Optional<Booking> optionalBooking = dataSource.bookAvailableAccount(state, req.getPayload().getUser().getId());
+            Optional<Booking> optionalBooking = accountService.bookAvailableAccount(state, req.getPayload().getUser().getId());
             if (optionalBooking.isPresent()) {
                 Booking booking = optionalBooking.get();
                 ZoomAccount account = accountService.getAccount(booking.getAccountId());
