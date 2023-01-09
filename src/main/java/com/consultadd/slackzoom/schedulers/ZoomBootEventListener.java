@@ -12,6 +12,7 @@ import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,14 +25,15 @@ public class ZoomBootEventListener implements ApplicationListener<ApplicationEve
     private final App app;
     private final AppConfig config;
     private final SlackViews slackViews;
-    private static final String CHANNEL_ID = "C04HS17S0JJ";
+    @Value(value = "${BOT_UPDATE_CHANNEL_ID}")
+    String botUpdateChannelId;
     private ChatPostMessageResponse response = null;
 
     @Scheduled(initialDelay = 5000, fixedDelay = 10000)
     public void updateChannel() throws SlackApiException, IOException {
         if (response == null) {
             ChatPostMessageResponse chatPostMessageResponse = app.getClient()
-                    .chatPostMessage(req -> req.channel(CHANNEL_ID)
+                    .chatPostMessage(req -> req.channel(botUpdateChannelId)
                             .blocks(slackViews.getAccountStatus())
                             .token(config.getSingleTeamBotToken()));
             if (chatPostMessageResponse.isOk()) {
@@ -41,7 +43,7 @@ public class ZoomBootEventListener implements ApplicationListener<ApplicationEve
         } else {
             ChatUpdateResponse chatUpdateResponse = app.getClient()
                     .chatUpdate(ChatUpdateRequest.builder()
-                            .channel(CHANNEL_ID)
+                            .channel(botUpdateChannelId)
                             .ts(this.response.getTs())
                             .blocks(slackViews.getAccountStatus())
                             .token(config.getSingleTeamBotToken()).build());

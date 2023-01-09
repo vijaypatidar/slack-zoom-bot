@@ -17,9 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.annotation.Bean;
@@ -27,10 +26,10 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class SlackApp implements ApplicationEventPublisherAware {
     private final SlackViews slackViews;
     private final ZoomAccountService accountService;
-    Logger logger = LoggerFactory.getLogger(SlackApp.class);
     private ApplicationEventPublisher applicationEventPublisher;
 
     @Bean

@@ -28,7 +28,7 @@ public class SlackViews {
     public static final String PLAIN_TEXT = "plain_text";
     public static final String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
     public static final String DANGER = "danger";
-    public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "release_booked_account";
+    public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "ACTION_RELEASE_BOOKED_ACCOUNT";
     public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
 
     private final ZoomAccountService accountService;
@@ -128,9 +128,9 @@ public class SlackViews {
         List<LayoutBlock> blocks = new LinkedList<>();
         blocks.add(SectionBlock
                 .builder()
-                .text(PlainTextObject
+                .text(MarkdownTextObject
                         .builder()
-                        .text("Zoom accounts status")
+                        .text("*Zoom accounts status*")
                         .build())
                 .build());
 
