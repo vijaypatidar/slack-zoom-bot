@@ -3,7 +3,8 @@ package com.consultadd.slackzoom.services.impls;
 import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.services.BookingService;
-import com.consultadd.slackzoom.utils.TimeUtils;
+import com.consultadd.slackzoom.utils.DateTimeUtils;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.HashMap;
@@ -21,25 +22,31 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 @Slf4j
 public class DynamoDbBookingService implements BookingService {
 
+    private final DynamoDbClient dynamoDbClient;
     @Value(value = "${DB_BOOKINGS_TABLE_NAME}")
     String bookingsTableName;
-    private final DynamoDbClient dynamoDbClient;
 
     public Booking mapToBooking(Map<String, AttributeValue> valueMap) {
         return Booking.builder()
                 .bookingId(valueMap.get("bookingId").s())
                 .accountId(valueMap.get("accountId").s())
                 .userId(valueMap.get("userId").s())
-                .startTime(TimeUtils.stringToLocalTime(valueMap.get("startTime").s()))
-                .endTime(TimeUtils.stringToLocalTime(valueMap.get("endTime").s()))
+                .startTime(DateTimeUtils.stringToLocalTime(valueMap.get("startTime").s()))
+                .endTime(DateTimeUtils.stringToLocalTime(valueMap.get("endTime").s()))
+                .bookingDate(DateTimeUtils.stringToDate(valueMap.get("bookingDate").s()))
                 .build();
     }
 
 
     @Override
-    public List<Booking> getAllBookings(AccountType accountType) {
+    public List<Booking> getAllBookings(AccountType accountType, LocalDate bookingDate) {
         try {
+            String matchBookingDate = "bookingDate = :bookingDate";
+            Map<String, AttributeValue> filters = new HashMap<>();
+            filters.put(":bookingDate", AttributeValue.builder().s(DateTimeUtils.dateToString(bookingDate)).build());
             ScanResponse scanResponse = dynamoDbClient.scan(ScanRequest.builder()
+                    .filterExpression(matchBookingDate)
+                    .expressionAttributeValues(filters)
                     .tableName(bookingsTableName).build());
             return scanResponse
                     .items()
@@ -58,8 +65,9 @@ public class DynamoDbBookingService implements BookingService {
         item.put("bookingId", AttributeValue.builder().s(booking.getBookingId()).build());
         item.put("accountId", AttributeValue.builder().s(booking.getAccountId()).build());
         item.put("userId", AttributeValue.builder().s(booking.getUserId()).build());
-        item.put("startTime", AttributeValue.builder().s(TimeUtils.timeToString(booking.getStartTime())).build());
-        item.put("endTime", AttributeValue.builder().s(TimeUtils.timeToString(booking.getEndTime())).build());
+        item.put("startTime", AttributeValue.builder().s(DateTimeUtils.timeToString(booking.getStartTime())).build());
+        item.put("endTime", AttributeValue.builder().s(DateTimeUtils.timeToString(booking.getEndTime())).build());
+        item.put("bookingDate", AttributeValue.builder().s(DateTimeUtils.dateToString(booking.getBookingDate())).build());
         PutItemRequest putItemRequest = PutItemRequest.builder()
                 .item(item)
                 .tableName(bookingsTableName)

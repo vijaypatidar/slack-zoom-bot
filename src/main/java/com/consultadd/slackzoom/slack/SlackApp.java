@@ -4,8 +4,10 @@ import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
 import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.models.Booking;
+import com.consultadd.slackzoom.models.BookingRequest;
 import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.BookingService;
+import com.consultadd.slackzoom.utils.DateTimeUtils;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
 import com.slack.api.bolt.handler.builtin.ViewSubmissionHandler;
@@ -17,6 +19,8 @@ import com.slack.api.model.block.composition.MarkdownTextObject;
 import com.slack.api.model.block.composition.PlainTextObject;
 import com.slack.api.model.block.element.ButtonElement;
 import com.slack.api.model.view.ViewState;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,14 +150,27 @@ public class SlackApp implements ApplicationEventPublisherAware {
         return (req, ctx) -> {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
-            Optional<Booking> optionalBooking = accountService.bookAvailableAccount(state, req.getPayload().getUser().getId(), accountType);
+            LocalTime startTime = LocalTime.parse(state.get("startTime").getSelectedTime());
+            LocalTime endTime = LocalTime.parse(state.get("endTime").getSelectedTime());
+            LocalDate bookingDate = DateTimeUtils.stringToDate(state.get("bookingDate").getSelectedDate());
+
+            BookingRequest bookingRequest = BookingRequest.builder()
+                    .userId(req.getPayload().getUser().getId())
+                    .accountType(accountType)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .bookingDate(bookingDate)
+                    .build();
+
+            Optional<Booking> optionalBooking = accountService.bookAvailableAccount(bookingRequest);
             if (optionalBooking.isPresent()) {
                 Booking booking = optionalBooking.get();
                 Account account = accountService.getAccount(booking.getAccountId(), accountType);
                 String text = String.format(
-                        "You can use this account from %s to %s EST.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
-                        state.get("startTime").getSelectedTime(),
-                        state.get("endTime").getSelectedTime(),
+                        "You can use this account from %s to %s EST on %s.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
+                        DateTimeUtils.timeToString(bookingRequest.getStartTime()),
+                        DateTimeUtils.timeToString(bookingRequest.getEndTime()),
+                        DateTimeUtils.dateToString(bookingRequest.getBookingDate()),
                         account.getAccountName(),
                         account.getUsername(),
                         account.getPassword()

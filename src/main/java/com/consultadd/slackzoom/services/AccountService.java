@@ -3,8 +3,9 @@ package com.consultadd.slackzoom.services;
 import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.models.Booking;
+import com.consultadd.slackzoom.models.BookingRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.slack.api.model.view.ViewState;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
@@ -15,9 +16,9 @@ public interface AccountService {
 
     Account getAccount(String accountId, AccountType accountType);
 
-    List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType);
+    List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType, LocalDate bookingDate);
 
-    Map<String, List<Booking>> findBookings(AccountType accountType);
+    Map<String, List<Booking>> findBookings(AccountType accountType, LocalDate bookingDate);
 
-    Optional<Booking> bookAvailableAccount(Map<String, ViewState.Value> state, String userId, AccountType accountType) throws JsonProcessingException;
+    Optional<Booking> bookAvailableAccount(BookingRequest bookingRequest) throws JsonProcessingException;
 }

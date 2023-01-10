@@ -1,5 +1,6 @@
 package com.consultadd.slackzoom.models;
 
+import com.consultadd.slackzoom.enums.AccountType;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import lombok.AllArgsConstructor;
@@ -11,11 +12,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Booking {
+public class BookingRequest {
     LocalTime startTime;
     LocalTime endTime;
     String userId;
-    String bookingId;
-    String accountId;
     LocalDate bookingDate;
+    AccountType accountType;
 }

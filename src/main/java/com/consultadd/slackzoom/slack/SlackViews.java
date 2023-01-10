@@ -4,16 +4,19 @@ import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.BookingService;
-import com.consultadd.slackzoom.utils.TimeUtils;
+import com.consultadd.slackzoom.utils.DateTimeUtils;
 import com.slack.api.model.block.*;
 import com.slack.api.model.block.composition.MarkdownTextObject;
 import com.slack.api.model.block.composition.PlainTextObject;
 import com.slack.api.model.block.element.ButtonElement;
+import com.slack.api.model.block.element.DatePickerElement;
 import com.slack.api.model.block.element.TimePickerElement;
 import com.slack.api.model.view.View;
 import com.slack.api.model.view.ViewClose;
 import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -53,7 +56,21 @@ public class SlackViews {
 
         blocks.add(SectionBlock.builder()
                 .text(PlainTextObject.builder()
-                        .text("Please select the duration for which you need " + accountType.getDisplayName() + ".")
+                        .text("Please select the day and duration for which you need " + accountType.getDisplayName() + ".")
+                        .build())
+                .build());
+
+        blocks.add(InputBlock.builder()
+                .element(DatePickerElement.builder()
+                        .actionId("bookingDate")
+                        .initialDate(DateTimeUtils.dateToString(LocalDate.now()))
+                        .placeholder(PlainTextObject
+                                .builder()
+                                .text("Select booking date")
+                                .build())
+                        .build())
+                .label(PlainTextObject.builder()
+                        .text("Booking date")
                         .build())
                 .build());
 
@@ -130,7 +147,7 @@ public class SlackViews {
                         .build())
                 .build());
 
-        Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings(accountType);
+        Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings(accountType, LocalDate.now(ZoneId.of(DateTimeUtils.ZONE_ID)));
 
         AtomicInteger count = new AtomicInteger(1);
         accountService.getAllAccounts(accountType).forEach(zoomAccount -> {
@@ -155,7 +172,7 @@ public class SlackViews {
                                 .text("<@" +
                                         activeBooking.getUserId() +
                                         "> is using this account right now and it will get available after " +
-                                        TimeUtils.timeToString(activeBooking.getEndTime()) +
+                                        DateTimeUtils.timeToString(activeBooking.getEndTime()) +
                                         " EST.")
                                 .build()))
                         .build());
@@ -166,7 +183,7 @@ public class SlackViews {
                     .ifPresent(bookings -> {
                         String uses = bookings.stream()
                                 .sorted(Comparator.comparing(Booking::getStartTime))
-                                .map(b -> TimeUtils.timeToString(b.getStartTime()) + " - " + TimeUtils.timeToString(b.getEndTime()) + "\t<@" + b.getUserId() + ">")
+                                .map(b -> DateTimeUtils.timeToString(b.getStartTime()) + " - " + DateTimeUtils.timeToString(b.getEndTime()) + "\t<@" + b.getUserId() + ">")
                                 .reduce((a, b) -> a + "\n" + b)
                                 .orElse("");
 

@@ -3,9 +3,10 @@ package com.consultadd.slackzoom.services.impls;
 import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.models.Booking;
+import com.consultadd.slackzoom.models.BookingRequest;
 import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.BookingService;
-import com.slack.api.model.view.ViewState;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,10 +23,10 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 @RequiredArgsConstructor
 @Slf4j
 public class DynamoDbAccountService implements AccountService {
-    @Value(value = "${DB_ACCOUNTS_TABLE_NAME}")
-    String accountsTableName;
     private final DynamoDbClient dynamoDbClient;
     private final BookingService bookingService;
+    @Value(value = "${DB_ACCOUNTS_TABLE_NAME}")
+    String accountsTableName;
 
     @Override
     public List<Account> getAllAccounts(AccountType accountType) {
@@ -54,8 +55,8 @@ public class DynamoDbAccountService implements AccountService {
     }
 
     @Override
-    public List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType) {
-        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap(accountType);
+    public List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType, LocalDate bookingDate) {
+        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap(accountType, bookingDate);
         return getAllAccounts(accountType).stream().filter(account -> {
             for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
                 if (
@@ -74,18 +75,21 @@ public class DynamoDbAccountService implements AccountService {
 
 
     @Override
-    public Map<String, List<Booking>> findBookings(AccountType accountType) {
+    public Map<String, List<Booking>> findBookings(AccountType accountType, LocalDate bookingDate) {
         return bookingService
-                .getAllBookings(accountType)
+                .getAllBookings(accountType, bookingDate)
                 .stream()
                 .collect(Collectors.groupingBy(Booking::getAccountId));
     }
 
-    public Optional<Booking> bookAvailableAccount(Map<String, ViewState.Value> state, String userId, AccountType accountType) {
-        log.info("ViewState:" + state);
-        LocalTime startTime = LocalTime.parse(state.get("startTime").getSelectedTime());
-        LocalTime endTime = LocalTime.parse(state.get("endTime").getSelectedTime());
-        List<Account> availableAccounts = findAvailableAccounts(startTime, endTime, accountType);
+    @Override
+    public Optional<Booking> bookAvailableAccount(BookingRequest request) {
+        LocalTime startTime = request.getStartTime();
+        LocalTime endTime = request.getEndTime();
+        LocalDate bookingDate = request.getBookingDate();
+        AccountType accountType = request.getAccountType();
+
+        List<Account> availableAccounts = findAvailableAccounts(startTime, endTime, accountType, bookingDate);
         if (availableAccounts.isEmpty()) {
             return Optional.empty();
         } else {
@@ -94,7 +98,8 @@ public class DynamoDbAccountService implements AccountService {
                     .bookingId(UUID.randomUUID().toString())
                     .startTime(startTime)
                     .endTime(endTime)
-                    .userId(userId)
+                    .userId(request.getUserId())
+                    .bookingDate(bookingDate)
                     .accountId(account.getAccountId())
                     .build();
             bookingService.bookAccount(booking);
@@ -102,9 +107,9 @@ public class DynamoDbAccountService implements AccountService {
         }
     }
 
-    private Map<String, List<Booking>> getAccountIdToBookingsMap(AccountType accountType) {
+    private Map<String, List<Booking>> getAccountIdToBookingsMap(AccountType accountType, LocalDate bookingDate) {
         return bookingService
-                .getAllBookings(accountType)
+                .getAllBookings(accountType, bookingDate)
                 .stream()
                 .collect(Collectors.groupingBy(Booking::getAccountId));
     }
