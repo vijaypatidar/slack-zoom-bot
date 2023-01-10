@@ -1,8 +1,9 @@
 package com.consultadd.slackzoom.slack;
 
+import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.services.AccountService;
-import com.consultadd.slackzoom.services.AccountType;
+import com.consultadd.slackzoom.services.BookingService;
 import com.consultadd.slackzoom.utils.TimeUtils;
 import com.slack.api.model.block.*;
 import com.slack.api.model.block.composition.MarkdownTextObject;
@@ -32,6 +33,7 @@ public class SlackViews {
     public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
 
     private final AccountService accountService;
+    private final BookingService bookingService;
 
     public View getRequestModal(AccountType accountType) {
         ViewTitle title = ViewTitle.builder()
@@ -83,6 +85,7 @@ public class SlackViews {
                         .builder()
                         .text("End time")
                         .build())
+                .blockId("endTimeBlock")
                 .build());
 
         return View.builder()
@@ -105,12 +108,11 @@ public class SlackViews {
                         .build())
                 .build());
         blocks.addAll(Stream
-                .of(AccountType.ZOOM, AccountType.GV)
+                .of(AccountType.values())
                 .map(this::getAccountStatus)
                 .filter(b -> b.size() > 2)
                 .reduce((l1, l2) -> {
-                    List<LayoutBlock> merge = new LinkedList<>();
-                    merge.addAll(l1);
+                    List<LayoutBlock> merge = new LinkedList<>(l1);
                     merge.add(DividerBlock.builder().build());
                     merge.addAll(l2);
                     return merge;
@@ -128,28 +130,32 @@ public class SlackViews {
                         .build())
                 .build());
 
-        Map<String, Booking> activeBookings = accountService.findActiveBookings(accountType);
         Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings(accountType);
 
         AtomicInteger count = new AtomicInteger(1);
         accountService.getAllAccounts(accountType).forEach(zoomAccount -> {
-            Booking booking = activeBookings.get(zoomAccount.getAccountId());
+            Booking activeBooking = Optional
+                    .ofNullable(accountIdToBookingMap.get(zoomAccount.getAccountId()))
+                    .orElse(List.of())
+                    .stream()
+                    .filter(bookingService::isActiveBooking)
+                    .findAny().orElse(null);
             blocks.add(SectionBlock
                     .builder()
                     .text(MarkdownTextObject
                             .builder()
-                            .text("`" + count.getAndIncrement() + ".` *" + zoomAccount.getAccountName() + "*" + (booking == null ? " (available)" : " (in use)"))
+                            .text("`" + count.getAndIncrement() + ".` *" + zoomAccount.getAccountName() + "*" + (activeBooking == null ? " (available)" : " (in use)"))
                             .build())
                     .build());
-            if (booking != null) {
+            if (activeBooking != null) {
                 blocks.add(ContextBlock
                         .builder()
                         .elements(List.of(MarkdownTextObject
                                 .builder()
                                 .text("<@" +
-                                        booking.getUserId() +
+                                        activeBooking.getUserId() +
                                         "> is using this account right now and it will get available after " +
-                                        TimeUtils.timeToString(booking.getEndTime()) +
+                                        TimeUtils.timeToString(activeBooking.getEndTime()) +
                                         " EST.")
                                 .build()))
                         .build());

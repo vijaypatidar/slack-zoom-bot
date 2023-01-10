@@ -1,15 +1,17 @@
-package com.consultadd.slackzoom.services;
+package com.consultadd.slackzoom.services.impls;
 
+import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.models.Booking;
-import com.consultadd.slackzoom.utils.TimeUtils;
+import com.consultadd.slackzoom.services.AccountService;
+import com.consultadd.slackzoom.services.BookingService;
 import com.slack.api.model.view.ViewState;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -19,20 +21,11 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DBAccountService implements AccountService {
+public class DynamoDbAccountService implements AccountService {
+    @Value(value = "${DB_ACCOUNTS_TABLE_NAME}")
+    String accountsTableName;
     private final DynamoDbClient dynamoDbClient;
-    private static final String DYNAMODB_ACCOUNTS_TABLE = "slack-bot-zoom-accounts";
-    List<Booking> bookings = new LinkedList<>();
-
-    public static Booking mapToBooking(Map<String, AttributeValue> valueMap) {
-        return Booking.builder()
-                .bookingId(valueMap.get("booking_id").s())
-                .accountId(valueMap.get("account_id").s())
-                .userId(valueMap.get("user_id").s())
-                .startTime(TimeUtils.stringToLocalTime(valueMap.get("start_time").s()))
-                .endTime(TimeUtils.stringToLocalTime(valueMap.get("end_time").s()))
-                .build();
-    }
+    private final BookingService bookingService;
 
     @Override
     public List<Account> getAllAccounts(AccountType accountType) {
@@ -43,14 +36,14 @@ public class DBAccountService implements AccountService {
             ScanResponse scanResponse = dynamoDbClient.scan(ScanRequest.builder()
                     .filterExpression(matchAccountType)
                     .expressionAttributeValues(filters)
-                    .tableName(DYNAMODB_ACCOUNTS_TABLE).build());
+                    .tableName(accountsTableName).build());
             return scanResponse
                     .items()
                     .stream()
-                    .map(Account::toZoomAccount)
+                    .map(this::toAccount)
                     .toList();
         } catch (Exception e) {
-            log.error("Error scanning accounts table", e);
+            log.error("Error scanning bookings table", e);
             return List.of();
         }
     }
@@ -62,7 +55,7 @@ public class DBAccountService implements AccountService {
 
     @Override
     public List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType) {
-        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap();
+        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap(accountType);
         return getAllAccounts(accountType).stream().filter(account -> {
             for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
                 if (
@@ -70,6 +63,7 @@ public class DBAccountService implements AccountService {
                                 || booking.getStartTime().isBefore(endTime) && endTime.isBefore(booking.getEndTime())
                                 || startTime.isBefore(booking.getStartTime()) && booking.getStartTime().isBefore(endTime)
                                 || startTime.isBefore(booking.getEndTime()) && booking.getEndTime().isBefore(endTime)
+                                || booking.getStartTime().equals(startTime) || booking.getEndTime().equals(endTime)
                 ) {
                     return false;
                 }
@@ -78,34 +72,13 @@ public class DBAccountService implements AccountService {
         }).toList();
     }
 
-    @Override
-    public Map<String, Booking> findActiveBookings(AccountType accountType) {
-        LocalTime startTime = LocalTime.now(ZoneId.of("-05:00"));
-        Map<String, Booking> result = new HashMap<>();
-        Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap();
-        getAllAccounts(accountType).forEach(account -> {
-            for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
-                if (booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())) {
-                    result.put(account.getAccountId(), booking);
-                }
-            }
-        });
-        return result;
-    }
 
     @Override
     public Map<String, List<Booking>> findBookings(AccountType accountType) {
-        return bookings.stream().collect(Collectors.groupingBy(Booking::getAccountId));
-    }
-
-    @Override
-    public void bookAccount(Booking booking) {
-        bookings.add(booking);
-    }
-
-    @Override
-    public void deleteBooking(String bookingId) {
-        bookings.removeIf(booking -> booking.getBookingId().equals(bookingId));
+        return bookingService
+                .getAllBookings(accountType)
+                .stream()
+                .collect(Collectors.groupingBy(Booking::getAccountId));
     }
 
     public Optional<Booking> bookAvailableAccount(Map<String, ViewState.Value> state, String userId, AccountType accountType) {
@@ -117,14 +90,33 @@ public class DBAccountService implements AccountService {
             return Optional.empty();
         } else {
             Account account = availableAccounts.get(0);
-            Booking booking = new Booking(startTime, endTime, userId, UUID.randomUUID().toString(), account.getAccountId());
-            bookAccount(booking);
+            Booking booking = Booking.builder()
+                    .bookingId(UUID.randomUUID().toString())
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .userId(userId)
+                    .accountId(account.getAccountId())
+                    .build();
+            bookingService.bookAccount(booking);
             return Optional.of(booking);
         }
     }
 
-    private Map<String, List<Booking>> getAccountIdToBookingsMap() {
-        return bookings.stream().collect(Collectors.groupingBy(Booking::getAccountId));
+    private Map<String, List<Booking>> getAccountIdToBookingsMap(AccountType accountType) {
+        return bookingService
+                .getAllBookings(accountType)
+                .stream()
+                .collect(Collectors.groupingBy(Booking::getAccountId));
     }
 
+    public Account toAccount(Map<String, AttributeValue> valueMap) {
+        return Account
+                .builder()
+                .accountId(valueMap.get("account_id").s())
+                .username(valueMap.get("username").s())
+                .password(valueMap.get("password").s())
+                .accountName(valueMap.get("account_name").s())
+                .accountType(AccountType.ZOOM)
+                .build();
+    }
 }

@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.services;
+package com.consultadd.slackzoom.enums;
 
 public enum AccountType {
     ZOOM("ZOOM", "Zoom Account"),
