@@ -89,7 +89,7 @@ public class DynamoDbBookingService implements BookingService {
 
     @Override
     public boolean isActiveBooking(Booking booking) {
-        LocalTime startTime = LocalTime.now(ZoneId.of("-05:00"));
+        LocalTime startTime = LocalTime.now(ZoneId.of(DateTimeUtils.ZONE_ID));
         return booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime());
     }
 
