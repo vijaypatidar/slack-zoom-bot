@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter;
 
 public class DateTimeUtils {
 
-    public static String ZONE_ID = "-05:00";
+    public static final String ZONE_ID = "-05:00";
     private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
             .withZone(ZoneId.of(ZONE_ID));
 
