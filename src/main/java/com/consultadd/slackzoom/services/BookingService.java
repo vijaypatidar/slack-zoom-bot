@@ -7,11 +7,11 @@ import java.util.List;
 
 public interface BookingService {
 
-    List<Booking> getAllBookings(AccountType accountType, LocalDate bookingDate);
+    List<Booking> findBookings(AccountType accountType, LocalDate bookingDate);
 
-    void bookAccount(Booking booking);
+    void save(Booking booking);
 
-    void deleteBooking(String bookingId);
+    void delete(String bookingId);
 
     boolean isActiveBooking(Booking booking);
 }

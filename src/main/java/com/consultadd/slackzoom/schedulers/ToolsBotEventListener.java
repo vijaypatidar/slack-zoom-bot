@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ZoomBootEventListener implements ApplicationListener<ApplicationEvent> {
+public class ToolsBotEventListener implements ApplicationListener<ApplicationEvent> {
     private final App app;
     private final AppConfig config;
     private final SlackViews slackViews;

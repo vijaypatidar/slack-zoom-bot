@@ -8,17 +8,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public interface AccountService {
-    List<Account> getAllAccounts(AccountType accountType);
+    List<Account> findAccounts(AccountType accountType);
 
     Account getAccount(String accountId, AccountType accountType);
 
     List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType, LocalDate bookingDate);
 
-    Map<String, List<Booking>> findBookings(AccountType accountType, LocalDate bookingDate);
-
     Optional<Booking> bookAvailableAccount(BookingRequest bookingRequest) throws JsonProcessingException;
+
+    void save(Account account);
 }

@@ -21,10 +21,8 @@ import com.slack.api.model.block.element.ButtonElement;
 import com.slack.api.model.view.ViewState;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +41,8 @@ public class SlackApp implements ApplicationEventPublisherAware {
     private ApplicationEventPublisher applicationEventPublisher;
 
     private static void handleTimeBlocksEvent(App app) {
-        app.blockAction(".Time", (req, context) -> context.ack());
+        app.blockAction(Pattern.compile(".*Time"), (req, context) -> context.ack());
+        app.blockAction(Pattern.compile(".*Date"), (req, context) -> context.ack());
     }
 
     private static void buildClearCommand(App app) {
@@ -64,13 +63,22 @@ public class SlackApp implements ApplicationEventPublisherAware {
     @Bean
     public App initSlackApp(AppConfig config) {
         App app = new App(config);
-        buildAccountsCommand(app);
+        buildAccountTypesCommand(app);
         buildClearCommand(app);
+        buildAccountAddCommand(app);
         handleTimeBlocksEvent(app);
         buildSaveViewCallbacks(app);
+        buildAddUpdateAccountViewCallbacks(app);
         buildFreeAccountBlockAction(app);
         handleBookAccountAction(app);
         return app;
+    }
+
+    private void buildAddUpdateAccountViewCallbacks(App app) {
+        app.viewSubmission(
+                SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK,
+                handleAddUpdateAccountViewSubmission(app)
+        );
     }
 
     @Bean
@@ -111,7 +119,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
                     .findAny()
                     .orElseThrow()
                     .getValue();
-            bookingService.deleteBooking(bookingId);
+            bookingService.delete(bookingId);
             applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
             app.getClient()
                     .chatPostMessage(builder -> builder
@@ -131,14 +139,30 @@ public class SlackApp implements ApplicationEventPublisherAware {
         }
     }
 
-    private void buildAccountsCommand(App app) {
+    private void buildAccountTypesCommand(App app) {
+        for (AccountType accountType : AccountType.values()) {
+            app.command("/" + accountType.getType(), (req, ctx) -> {
+                app.getClient()
+                        .viewsOpen(ViewsOpenRequest
+                                .builder()
+                                .triggerId(req.getPayload().getTriggerId())
+                                .token(ctx.getBotToken())
+                                .view(slackViews.getRequestModal(accountType))
+                                .build()
+                        );
+                return ctx.ack();
+            });
+        }
+    }
+
+    private void buildAccountAddCommand(App app) {
         app.command("/accounts", (req, ctx) -> {
             app.getClient()
                     .viewsOpen(ViewsOpenRequest
                             .builder()
                             .triggerId(req.getPayload().getTriggerId())
                             .token(ctx.getBotToken())
-                            .view(slackViews.getRequestModal(AccountType.ZOOM))
+                            .view(slackViews.addUpdateAccountView(true))
                             .build()
                     );
             return ctx.ack();
@@ -202,6 +226,29 @@ public class SlackApp implements ApplicationEventPublisherAware {
             } else {
                 return ctx.ackWithErrors(Map.of("endTimeBlock", "There is no account available for this time frame."));
             }
+            return ctx.ack();
+        };
+    }
+
+    @NotNull
+    private ViewSubmissionHandler handleAddUpdateAccountViewSubmission(App app) {
+        return (req, ctx) -> {
+            Map<String, ViewState.Value> state = new HashMap<>();
+            req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
+
+            String accountName = state.get("accountName").getValue();
+            AccountType accountType = AccountType.valueOf(state.get("accountType").getSelectedOption().getValue());
+            String accountUsername = state.get("accountUsername").getValue();
+            String accountPassword = state.get("accountPassword").getValue();
+            Account newAccount = Account.builder()
+                    .accountType(accountType)
+                    .accountName(accountName)
+                    .accountId(UUID.randomUUID().toString())
+                    .username(accountUsername)
+                    .password(accountPassword)
+                    .build();
+            accountService.save(newAccount);
+            applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
             return ctx.ack();
         };
     }

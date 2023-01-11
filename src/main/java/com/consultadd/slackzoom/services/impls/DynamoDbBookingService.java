@@ -14,15 +14,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DynamoDbBookingService implements BookingService {
+public class DynamoDbBookingService extends AbstractDynamoDbService implements BookingService {
 
-    private final DynamoDbClient dynamoDbClient;
     @Value(value = "${DB_BOOKINGS_TABLE_NAME}")
     String bookingsTableName;
 
@@ -39,12 +37,12 @@ public class DynamoDbBookingService implements BookingService {
 
 
     @Override
-    public List<Booking> getAllBookings(AccountType accountType, LocalDate bookingDate) {
+    public List<Booking> findBookings(AccountType accountType, LocalDate bookingDate) {
         try {
             String matchBookingDate = "bookingDate = :bookingDate";
             Map<String, AttributeValue> filters = new HashMap<>();
             filters.put(":bookingDate", AttributeValue.builder().s(DateTimeUtils.dateToString(bookingDate)).build());
-            ScanResponse scanResponse = dynamoDbClient.scan(ScanRequest.builder()
+            ScanResponse scanResponse = getDynamoDbClient().scan(ScanRequest.builder()
                     .filterExpression(matchBookingDate)
                     .expressionAttributeValues(filters)
                     .tableName(bookingsTableName).build());
@@ -60,7 +58,7 @@ public class DynamoDbBookingService implements BookingService {
     }
 
     @Override
-    public void bookAccount(Booking booking) {
+    public void save(Booking booking) {
         Map<String, AttributeValue> item = new HashMap<>();
         item.put("bookingId", AttributeValue.builder().s(booking.getBookingId()).build());
         item.put("accountId", AttributeValue.builder().s(booking.getAccountId()).build());
@@ -72,11 +70,11 @@ public class DynamoDbBookingService implements BookingService {
                 .item(item)
                 .tableName(bookingsTableName)
                 .build();
-        dynamoDbClient.putItem(putItemRequest);
+        getDynamoDbClient().putItem(putItemRequest);
     }
 
     @Override
-    public void deleteBooking(String bookingId) {
+    public void delete(String bookingId) {
         Map<String, AttributeValue> key = new HashMap<>();
         key.put("bookingId", AttributeValue.builder().s(bookingId).build());
         DeleteItemRequest deleteItemRequest = DeleteItemRequest
@@ -84,7 +82,7 @@ public class DynamoDbBookingService implements BookingService {
                 .tableName(bookingsTableName)
                 .key(key)
                 .build();
-        dynamoDbClient.deleteItem(deleteItemRequest);
+        getDynamoDbClient().deleteItem(deleteItemRequest);
     }
 
     @Override

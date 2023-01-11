@@ -7,10 +7,9 @@ import com.consultadd.slackzoom.services.BookingService;
 import com.consultadd.slackzoom.utils.DateTimeUtils;
 import com.slack.api.model.block.*;
 import com.slack.api.model.block.composition.MarkdownTextObject;
+import com.slack.api.model.block.composition.OptionObject;
 import com.slack.api.model.block.composition.PlainTextObject;
-import com.slack.api.model.block.element.ButtonElement;
-import com.slack.api.model.block.element.DatePickerElement;
-import com.slack.api.model.block.element.TimePickerElement;
+import com.slack.api.model.block.element.*;
 import com.slack.api.model.view.View;
 import com.slack.api.model.view.ViewClose;
 import com.slack.api.model.view.ViewSubmit;
@@ -19,6 +18,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +31,7 @@ public class SlackViews {
     public static final String MODAL_VIEW = "modal";
     public static final String PLAIN_TEXT = "plain_text";
     public static final String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
+    public static final String ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK = "ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK";
     public static final String DANGER = "danger";
     public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "ACTION_RELEASE_BOOKED_ACCOUNT";
     public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
@@ -60,8 +61,8 @@ public class SlackViews {
                         .build())
                 .build());
 
-        blocks.add(InputBlock.builder()
-                .element(DatePickerElement.builder()
+        blocks.add(SectionBlock.builder()
+                .accessory(DatePickerElement.builder()
                         .actionId("bookingDate")
                         .initialDate(DateTimeUtils.dateToString(LocalDate.now()))
                         .placeholder(PlainTextObject
@@ -69,13 +70,13 @@ public class SlackViews {
                                 .text("Select booking date")
                                 .build())
                         .build())
-                .label(PlainTextObject.builder()
+                .text(PlainTextObject.builder()
                         .text("Booking date")
                         .build())
                 .build());
 
-        blocks.add(InputBlock.builder()
-                .element(TimePickerElement
+        blocks.add(SectionBlock.builder()
+                .accessory(TimePickerElement
                         .builder()
                         .actionId("startTime")
                         .placeholder(PlainTextObject
@@ -83,14 +84,14 @@ public class SlackViews {
                                 .text("Select start time")
                                 .build())
                         .build())
-                .label(PlainTextObject
+                .text(PlainTextObject
                         .builder()
                         .text("Start time")
                         .build())
                 .build());
 
-        blocks.add(InputBlock.builder()
-                .element(TimePickerElement
+        blocks.add(SectionBlock.builder()
+                .accessory(TimePickerElement
                         .builder()
                         .actionId("endTime")
                         .placeholder(PlainTextObject
@@ -98,7 +99,7 @@ public class SlackViews {
                                 .text("Select end time")
                                 .build())
                         .build())
-                .label(PlainTextObject
+                .text(PlainTextObject
                         .builder()
                         .text("End time")
                         .build())
@@ -108,6 +109,96 @@ public class SlackViews {
         return View.builder()
                 .type(MODAL_VIEW)
                 .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + ":" + accountType.getType())
+                .title(title)
+                .submit(submit)
+                .close(close)
+                .blocks(blocks)
+                .build();
+    }
+
+    public View addUpdateAccountView(boolean isAddView) {
+        ViewTitle title = ViewTitle.builder()
+                .type(PLAIN_TEXT)
+                .text(isAddView ? "Add new account" : "Update account detail")
+                .build();
+        ViewSubmit submit = ViewSubmit.builder()
+                .type(PLAIN_TEXT)
+                .text("Add Account")
+                .build();
+        ViewClose close = ViewClose.builder()
+                .type(PLAIN_TEXT)
+                .text("Cancel")
+                .build();
+
+        List<LayoutBlock> blocks = new LinkedList<>();
+
+        blocks.add(InputBlock.builder()
+                .label(PlainTextObject.builder()
+                        .text("Account name")
+                        .build())
+                .element(PlainTextInputElement
+                        .builder()
+                        .actionId("accountName")
+                        .placeholder(PlainTextObject
+                                .builder()
+                                .text("Enter account name")
+                                .build())
+                        .build())
+                .build());
+
+        blocks.add(InputBlock.builder()
+                .label(PlainTextObject
+                        .builder()
+                        .text("Account type")
+                        .build())
+                .element(StaticSelectElement
+                        .builder()
+                        .actionId("accountType")
+                        .placeholder(PlainTextObject
+                                .builder()
+                                .text("Select account type")
+                                .build())
+                        .options(Stream.of(AccountType.values())
+                                .map(accountType -> OptionObject
+                                        .builder()
+                                        .text(PlainTextObject
+                                                .builder()
+                                                .text(accountType.getDisplayName())
+                                                .build())
+                                        .value(accountType.getType())
+                                        .build()).toList())
+                        .build())
+                .build());
+
+        blocks.add(InputBlock.builder()
+                .label(PlainTextObject.builder()
+                        .text("Username")
+                        .build())
+                .element(PlainTextInputElement
+                        .builder()
+                        .actionId("accountUsername")
+                        .placeholder(PlainTextObject
+                                .builder()
+                                .text("Enter account username/email")
+                                .build())
+                        .build())
+                .build());
+        blocks.add(InputBlock.builder()
+                .label(PlainTextObject.builder()
+                        .text("Password")
+                        .build())
+                .element(PlainTextInputElement
+                        .builder()
+                        .actionId("accountPassword")
+                        .placeholder(PlainTextObject
+                                .builder()
+                                .text("Enter account password")
+                                .build())
+                        .build())
+                .build());
+        return View.builder()
+                .type(MODAL_VIEW)
+                .callbackId(ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK)
                 .title(title)
                 .submit(submit)
                 .close(close)
@@ -147,12 +238,15 @@ public class SlackViews {
                         .build())
                 .build());
 
-        Map<String, List<Booking>> accountIdToBookingMap = accountService.findBookings(accountType, LocalDate.now(ZoneId.of(DateTimeUtils.ZONE_ID)));
+        Map<String, List<Booking>> accountIdToBookings = bookingService
+                .findBookings(accountType, LocalDate.now(ZoneId.of(DateTimeUtils.ZONE_ID)))
+                .stream()
+                .collect(Collectors.groupingBy(Booking::getAccountId));
 
         AtomicInteger count = new AtomicInteger(1);
-        accountService.getAllAccounts(accountType).forEach(zoomAccount -> {
+        accountService.findAccounts(accountType).forEach(zoomAccount -> {
             Booking activeBooking = Optional
-                    .ofNullable(accountIdToBookingMap.get(zoomAccount.getAccountId()))
+                    .ofNullable(accountIdToBookings.get(zoomAccount.getAccountId()))
                     .orElse(List.of())
                     .stream()
                     .filter(bookingService::isActiveBooking)
@@ -179,7 +273,7 @@ public class SlackViews {
             }
 
             Optional
-                    .ofNullable(accountIdToBookingMap.get(zoomAccount.getAccountId()))
+                    .ofNullable(accountIdToBookings.get(zoomAccount.getAccountId()))
                     .ifPresent(bookings -> {
                         String uses = bookings.stream()
                                 .sorted(Comparator.comparing(Booking::getStartTime))

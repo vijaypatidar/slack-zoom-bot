@@ -8,10 +8,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @ServletComponentScan
 @EnableScheduling
-public class SlackZoomApplication {
+public class ToolsBotApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(SlackZoomApplication.class, args);
+        SpringApplication.run(ToolsBotApplication.class, args);
     }
 
 }

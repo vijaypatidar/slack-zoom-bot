@@ -14,27 +14,26 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DynamoDbAccountService implements AccountService {
-    private final DynamoDbClient dynamoDbClient;
+public class DynamoDbAccountService extends AbstractDynamoDbService implements AccountService {
     private final BookingService bookingService;
     @Value(value = "${DB_ACCOUNTS_TABLE_NAME}")
     String accountsTableName;
 
     @Override
-    public List<Account> getAllAccounts(AccountType accountType) {
+    public List<Account> findAccounts(AccountType accountType) {
         try {
             String matchAccountType = "accountType = :accountType";
             Map<String, AttributeValue> filters = new HashMap<>();
             filters.put(":accountType", AttributeValue.builder().s(accountType.getType()).build());
-            ScanResponse scanResponse = dynamoDbClient.scan(ScanRequest.builder()
+            ScanResponse scanResponse = getDynamoDbClient().scan(ScanRequest.builder()
                     .filterExpression(matchAccountType)
                     .expressionAttributeValues(filters)
                     .tableName(accountsTableName).build());
@@ -51,13 +50,13 @@ public class DynamoDbAccountService implements AccountService {
 
     @Override
     public Account getAccount(String accountId, AccountType accountType) {
-        return getAllAccounts(accountType).stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
+        return findAccounts(accountType).stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
     }
 
     @Override
     public List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType, LocalDate bookingDate) {
         Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap(accountType, bookingDate);
-        return getAllAccounts(accountType).stream().filter(account -> {
+        return findAccounts(accountType).stream().filter(account -> {
             for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
                 if (
                         booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())
@@ -71,15 +70,6 @@ public class DynamoDbAccountService implements AccountService {
             }
             return true;
         }).toList();
-    }
-
-
-    @Override
-    public Map<String, List<Booking>> findBookings(AccountType accountType, LocalDate bookingDate) {
-        return bookingService
-                .getAllBookings(accountType, bookingDate)
-                .stream()
-                .collect(Collectors.groupingBy(Booking::getAccountId));
     }
 
     @Override
@@ -102,14 +92,30 @@ public class DynamoDbAccountService implements AccountService {
                     .bookingDate(bookingDate)
                     .accountId(account.getAccountId())
                     .build();
-            bookingService.bookAccount(booking);
+            bookingService.save(booking);
             return Optional.of(booking);
         }
     }
 
+    @Override
+    public void save(Account account) {
+        Map<String, AttributeValue> item = new HashMap<>();
+        item.put("account_id", AttributeValue.builder().s(account.getAccountId()).build());
+        item.put("accountType", AttributeValue.builder().s(account.getAccountType().getType()).build());
+        item.put("account_name", AttributeValue.builder().s(account.getAccountName()).build());
+        item.put("username", AttributeValue.builder().s(account.getUsername()).build());
+        item.put("password", AttributeValue.builder().s(account.getPassword()).build());
+        PutItemRequest putItemRequest = PutItemRequest
+                .builder()
+                .item(item)
+                .tableName(accountsTableName)
+                .build();
+        getDynamoDbClient().putItem(putItemRequest);
+    }
+
     private Map<String, List<Booking>> getAccountIdToBookingsMap(AccountType accountType, LocalDate bookingDate) {
         return bookingService
-                .getAllBookings(accountType, bookingDate)
+                .findBookings(accountType, bookingDate)
                 .stream()
                 .collect(Collectors.groupingBy(Booking::getAccountId));
     }
@@ -121,7 +127,7 @@ public class DynamoDbAccountService implements AccountService {
                 .username(valueMap.get("username").s())
                 .password(valueMap.get("password").s())
                 .accountName(valueMap.get("account_name").s())
-                .accountType(AccountType.ZOOM)
+                .accountType(AccountType.valueOf(valueMap.get("accountType").s()))
                 .build();
     }
 }
