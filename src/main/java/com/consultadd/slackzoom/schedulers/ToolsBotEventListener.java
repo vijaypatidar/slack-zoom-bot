@@ -38,8 +38,9 @@ public class ToolsBotEventListener implements ApplicationListener<ApplicationEve
                             .token(config.getSingleTeamBotToken()));
             if (chatPostMessageResponse.isOk()) {
                 this.response = chatPostMessageResponse;
+            } else {
+                log.error("ChatPostMessageResponse:{}", chatPostMessageResponse);
             }
-            log.info("ChatPostMessageResponse:{}", chatPostMessageResponse);
         } else {
             ChatUpdateResponse chatUpdateResponse = app.getClient()
                     .chatUpdate(ChatUpdateRequest.builder()
@@ -47,7 +48,9 @@ public class ToolsBotEventListener implements ApplicationListener<ApplicationEve
                             .ts(this.response.getTs())
                             .blocks(slackViews.getAccountStatusMessageView())
                             .token(config.getSingleTeamBotToken()).build());
-            log.info("ChatUpdateResponse:{}", chatUpdateResponse);
+            if (!chatUpdateResponse.isOk()) {
+                log.error("ChatUpdateResponse:{}", chatUpdateResponse);
+            }
         }
     }
 

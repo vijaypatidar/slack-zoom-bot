@@ -49,7 +49,7 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
                     .map(this::toAccount)
                     .toList();
         } catch (Exception e) {
-            log.error("Error scanning bookings table{}", accountsTableName, e);
+            log.error("Error scanning accounts table:{}", accountsTableName, e);
             return List.of();
         }
     }

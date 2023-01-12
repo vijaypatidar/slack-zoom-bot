@@ -58,7 +58,7 @@ public class DynamoDbBookingService extends AbstractDynamoDbService implements B
                     .map(this::mapToBooking)
                     .toList();
         } catch (Exception e) {
-            log.error("Error scanning accounts table", e);
+            log.error("Error scanning bookings table", e);
             return List.of();
         }
     }
@@ -93,7 +93,7 @@ public class DynamoDbBookingService extends AbstractDynamoDbService implements B
 
     @Override
     public boolean isActiveBooking(Booking booking) {
-        LocalTime startTime = LocalTime.now(ZoneId.of("-05:00"));
+        LocalTime startTime = LocalTime.now(DateTimeUtils.ZONE_ID);
         return booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime());
     }
 
