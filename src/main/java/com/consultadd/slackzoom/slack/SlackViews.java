@@ -1,6 +1,7 @@
 package com.consultadd.slackzoom.slack;
 
 import com.consultadd.slackzoom.enums.AccountType;
+import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.BookingService;
@@ -15,7 +16,6 @@ import com.slack.api.model.view.ViewClose;
 import com.slack.api.model.view.ViewSubmit;
 import com.slack.api.model.view.ViewTitle;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -116,14 +116,14 @@ public class SlackViews {
                 .build();
     }
 
-    public View addUpdateAccountView(boolean isAddView) {
+    public View addUpdateAccountView(Account account) {
         ViewTitle title = ViewTitle.builder()
                 .type(PLAIN_TEXT)
-                .text(isAddView ? "Add new account" : "Update account detail")
+                .text(account == null ? "Add new account" : "Update account detail")
                 .build();
         ViewSubmit submit = ViewSubmit.builder()
                 .type(PLAIN_TEXT)
-                .text("Add Account")
+                .text(account == null ? "Add Account" : "Update account")
                 .build();
         ViewClose close = ViewClose.builder()
                 .type(PLAIN_TEXT)
@@ -139,12 +139,28 @@ public class SlackViews {
                 .element(PlainTextInputElement
                         .builder()
                         .actionId("accountName")
+                        .initialValue(Optional.ofNullable(account).map(Account::getAccountName).orElse(null))
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Enter account name")
                                 .build())
                         .build())
                 .build());
+
+        List<OptionObject> options = Stream.of(AccountType.values())
+                .map(accountType -> OptionObject
+                        .builder()
+                        .text(PlainTextObject
+                                .builder()
+                                .text(accountType.getDisplayName())
+                                .build())
+                        .value(accountType.getType())
+                        .build()).toList();
+
+        OptionObject selectedOption = Optional.ofNullable(account).flatMap(acc -> options.stream()
+                .filter(optionObject -> optionObject.getValue().equals(acc.getAccountType().getType()))
+                .findAny()).orElse(null);
+
 
         blocks.add(InputBlock.builder()
                 .label(PlainTextObject
@@ -154,19 +170,12 @@ public class SlackViews {
                 .element(StaticSelectElement
                         .builder()
                         .actionId("accountType")
+                        .initialOption(selectedOption)
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Select account type")
                                 .build())
-                        .options(Stream.of(AccountType.values())
-                                .map(accountType -> OptionObject
-                                        .builder()
-                                        .text(PlainTextObject
-                                                .builder()
-                                                .text(accountType.getDisplayName())
-                                                .build())
-                                        .value(accountType.getType())
-                                        .build()).toList())
+                        .options(options)
                         .build())
                 .build());
 
@@ -177,6 +186,7 @@ public class SlackViews {
                 .element(PlainTextInputElement
                         .builder()
                         .actionId("accountUsername")
+                        .initialValue(Optional.ofNullable(account).map(Account::getUsername).orElse(null))
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Enter account username/email")
@@ -190,12 +200,14 @@ public class SlackViews {
                 .element(PlainTextInputElement
                         .builder()
                         .actionId("accountPassword")
+                        .initialValue(Optional.ofNullable(account).map(Account::getPassword).orElse(null))
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Enter account password")
                                 .build())
                         .build())
                 .build());
+
         return View.builder()
                 .type(MODAL_VIEW)
                 .callbackId(ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK)
@@ -239,7 +251,7 @@ public class SlackViews {
                 .build());
 
         Map<String, List<Booking>> accountIdToBookings = bookingService
-                .findBookings(accountType, LocalDate.now(ZoneId.of(DateTimeUtils.ZONE_ID)))
+                .findBookings(accountType, LocalDate.now())
                 .stream()
                 .collect(Collectors.groupingBy(Booking::getAccountId));
 

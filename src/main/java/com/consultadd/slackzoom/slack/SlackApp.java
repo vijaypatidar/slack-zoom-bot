@@ -162,7 +162,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
                             .builder()
                             .triggerId(req.getPayload().getTriggerId())
                             .token(ctx.getBotToken())
-                            .view(slackViews.addUpdateAccountView(true))
+                            .view(slackViews.addUpdateAccountView(null))
                             .build()
                     );
             return ctx.ack();

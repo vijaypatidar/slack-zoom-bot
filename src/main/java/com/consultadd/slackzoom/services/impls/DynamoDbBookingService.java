@@ -21,17 +21,23 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 @Slf4j
 public class DynamoDbBookingService extends AbstractDynamoDbService implements BookingService {
 
+    public static final String BOOKING_ID = "bookingId";
+    public static final String ACCOUNT_ID = "accountId";
+    public static final String USER_ID = "userId";
+    public static final String START_TIME = "startTime";
+    public static final String END_TIME = "endTime";
+    public static final String BOOKING_DATE = "bookingDate";
     @Value(value = "${DB_BOOKINGS_TABLE_NAME}")
     String bookingsTableName;
 
     public Booking mapToBooking(Map<String, AttributeValue> valueMap) {
         return Booking.builder()
-                .bookingId(valueMap.get("bookingId").s())
-                .accountId(valueMap.get("accountId").s())
-                .userId(valueMap.get("userId").s())
-                .startTime(DateTimeUtils.stringToLocalTime(valueMap.get("startTime").s()))
-                .endTime(DateTimeUtils.stringToLocalTime(valueMap.get("endTime").s()))
-                .bookingDate(DateTimeUtils.stringToDate(valueMap.get("bookingDate").s()))
+                .bookingId(valueMap.get(BOOKING_ID).s())
+                .accountId(valueMap.get(ACCOUNT_ID).s())
+                .userId(valueMap.get(USER_ID).s())
+                .startTime(DateTimeUtils.stringToLocalTime(valueMap.get(START_TIME).s()))
+                .endTime(DateTimeUtils.stringToLocalTime(valueMap.get(END_TIME).s()))
+                .bookingDate(DateTimeUtils.stringToDate(valueMap.get(BOOKING_DATE).s()))
                 .build();
     }
 
@@ -60,12 +66,12 @@ public class DynamoDbBookingService extends AbstractDynamoDbService implements B
     @Override
     public void save(Booking booking) {
         Map<String, AttributeValue> item = new HashMap<>();
-        item.put("bookingId", AttributeValue.builder().s(booking.getBookingId()).build());
-        item.put("accountId", AttributeValue.builder().s(booking.getAccountId()).build());
-        item.put("userId", AttributeValue.builder().s(booking.getUserId()).build());
-        item.put("startTime", AttributeValue.builder().s(DateTimeUtils.timeToString(booking.getStartTime())).build());
-        item.put("endTime", AttributeValue.builder().s(DateTimeUtils.timeToString(booking.getEndTime())).build());
-        item.put("bookingDate", AttributeValue.builder().s(DateTimeUtils.dateToString(booking.getBookingDate())).build());
+        item.put(BOOKING_ID, AttributeValue.builder().s(booking.getBookingId()).build());
+        item.put(ACCOUNT_ID, AttributeValue.builder().s(booking.getAccountId()).build());
+        item.put(USER_ID, AttributeValue.builder().s(booking.getUserId()).build());
+        item.put(START_TIME, AttributeValue.builder().s(DateTimeUtils.timeToString(booking.getStartTime())).build());
+        item.put(END_TIME, AttributeValue.builder().s(DateTimeUtils.timeToString(booking.getEndTime())).build());
+        item.put(BOOKING_DATE, AttributeValue.builder().s(DateTimeUtils.dateToString(booking.getBookingDate())).build());
         PutItemRequest putItemRequest = PutItemRequest.builder()
                 .item(item)
                 .tableName(bookingsTableName)
@@ -76,7 +82,7 @@ public class DynamoDbBookingService extends AbstractDynamoDbService implements B
     @Override
     public void delete(String bookingId) {
         Map<String, AttributeValue> key = new HashMap<>();
-        key.put("bookingId", AttributeValue.builder().s(bookingId).build());
+        key.put(BOOKING_ID, AttributeValue.builder().s(bookingId).build());
         DeleteItemRequest deleteItemRequest = DeleteItemRequest
                 .builder()
                 .tableName(bookingsTableName)
@@ -87,7 +93,7 @@ public class DynamoDbBookingService extends AbstractDynamoDbService implements B
 
     @Override
     public boolean isActiveBooking(Booking booking) {
-        LocalTime startTime = LocalTime.now(ZoneId.of(DateTimeUtils.ZONE_ID));
+        LocalTime startTime = LocalTime.now();
         return booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime());
     }
 

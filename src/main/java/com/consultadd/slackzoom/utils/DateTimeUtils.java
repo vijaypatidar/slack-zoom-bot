@@ -2,17 +2,13 @@ package com.consultadd.slackzoom.utils;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 public class DateTimeUtils {
 
-    public static final String ZONE_ID = "-05:00";
-    private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
-            .withZone(ZoneId.of(ZONE_ID));
+    private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
 
-    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyy-MM-dd")
-            .withZone(ZoneId.of(ZONE_ID));
+    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyy-MM-dd");
 
     private DateTimeUtils() {
     }

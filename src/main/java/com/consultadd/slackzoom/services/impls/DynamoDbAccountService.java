@@ -23,6 +23,11 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 @RequiredArgsConstructor
 @Slf4j
 public class DynamoDbAccountService extends AbstractDynamoDbService implements AccountService {
+    public static final String ACCOUNT_ID = "accountId";
+    public static final String ACCOUNT_TYPE = "accountType";
+    public static final String ACCOUNT_NAME = "accountName";
+    public static final String USERNAME = "username";
+    public static final String PASSWORD = "password";
     private final BookingService bookingService;
     @Value(value = "${DB_ACCOUNTS_TABLE_NAME}")
     String accountsTableName;
@@ -43,7 +48,7 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
                     .map(this::toAccount)
                     .toList();
         } catch (Exception e) {
-            log.error("Error scanning bookings table", e);
+            log.error("Error scanning bookings table{}",accountsTableName, e);
             return List.of();
         }
     }
@@ -100,11 +105,11 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
     @Override
     public void save(Account account) {
         Map<String, AttributeValue> item = new HashMap<>();
-        item.put("account_id", AttributeValue.builder().s(account.getAccountId()).build());
-        item.put("accountType", AttributeValue.builder().s(account.getAccountType().getType()).build());
-        item.put("account_name", AttributeValue.builder().s(account.getAccountName()).build());
-        item.put("username", AttributeValue.builder().s(account.getUsername()).build());
-        item.put("password", AttributeValue.builder().s(account.getPassword()).build());
+        item.put(ACCOUNT_ID, AttributeValue.builder().s(account.getAccountId()).build());
+        item.put(ACCOUNT_TYPE, AttributeValue.builder().s(account.getAccountType().getType()).build());
+        item.put(ACCOUNT_NAME, AttributeValue.builder().s(account.getAccountName()).build());
+        item.put(USERNAME, AttributeValue.builder().s(account.getUsername()).build());
+        item.put(PASSWORD, AttributeValue.builder().s(account.getPassword()).build());
         PutItemRequest putItemRequest = PutItemRequest
                 .builder()
                 .item(item)
@@ -123,11 +128,11 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
     public Account toAccount(Map<String, AttributeValue> valueMap) {
         return Account
                 .builder()
-                .accountId(valueMap.get("account_id").s())
-                .username(valueMap.get("username").s())
-                .password(valueMap.get("password").s())
-                .accountName(valueMap.get("account_name").s())
-                .accountType(AccountType.valueOf(valueMap.get("accountType").s()))
+                .accountId(valueMap.get(ACCOUNT_ID).s())
+                .username(valueMap.get(USERNAME).s())
+                .password(valueMap.get(PASSWORD).s())
+                .accountName(valueMap.get(ACCOUNT_NAME).s())
+                .accountType(AccountType.valueOf(valueMap.get(ACCOUNT_TYPE).s()))
                 .build();
     }
 }
