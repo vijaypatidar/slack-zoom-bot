@@ -93,7 +93,7 @@ public class DynamoDbBookingService extends AbstractDynamoDbService implements B
 
     @Override
     public boolean isActiveBooking(Booking booking) {
-        LocalTime startTime = LocalTime.now();
+        LocalTime startTime = LocalTime.now(ZoneId.of("-05:00"));
         return booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime());
     }
 

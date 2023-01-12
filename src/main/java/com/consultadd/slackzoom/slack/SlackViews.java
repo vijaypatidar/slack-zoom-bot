@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import static com.consultadd.slackzoom.utils.DateTimeUtils.ZONE_ID;
 
 @Component
 @Slf4j
@@ -251,7 +252,7 @@ public class SlackViews {
                 .build());
 
         Map<String, List<Booking>> accountIdToBookings = bookingService
-                .findBookings(accountType, LocalDate.now())
+                .findBookings(accountType, LocalDate.now(ZONE_ID))
                 .stream()
                 .collect(Collectors.groupingBy(Booking::getAccountId));
 

@@ -174,8 +174,8 @@ public class SlackApp implements ApplicationEventPublisherAware {
         return (req, ctx) -> {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
-            LocalTime startTime = LocalTime.parse(state.get("startTime").getSelectedTime());
-            LocalTime endTime = LocalTime.parse(state.get("endTime").getSelectedTime());
+            LocalTime startTime = DateTimeUtils.stringToLocalTime(state.get("startTime").getSelectedTime());
+            LocalTime endTime = DateTimeUtils.stringToLocalTime(state.get("endTime").getSelectedTime());
             LocalDate bookingDate = DateTimeUtils.stringToDate(state.get("bookingDate").getSelectedDate());
 
             BookingRequest bookingRequest = BookingRequest.builder()
