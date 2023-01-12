@@ -4,6 +4,7 @@ import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.models.BookingRequest;
+import com.consultadd.slackzoom.models.GetAvailableAccountRequest;
 import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.BookingService;
 import java.time.LocalDate;
@@ -48,7 +49,7 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
                     .map(this::toAccount)
                     .toList();
         } catch (Exception e) {
-            log.error("Error scanning bookings table{}",accountsTableName, e);
+            log.error("Error scanning bookings table{}", accountsTableName, e);
             return List.of();
         }
     }
@@ -59,7 +60,11 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
     }
 
     @Override
-    public List<Account> findAvailableAccounts(LocalTime startTime, LocalTime endTime, AccountType accountType, LocalDate bookingDate) {
+    public List<Account> findAvailableAccounts(GetAvailableAccountRequest request) {
+        AccountType accountType = request.getAccountType();
+        LocalDate bookingDate = request.getBookingDate();
+        LocalTime startTime = request.getStartTime();
+        LocalTime endTime = request.getEndTime();
         Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap(accountType, bookingDate);
         return findAccounts(accountType).stream().filter(account -> {
             for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
@@ -82,9 +87,15 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
         LocalTime startTime = request.getStartTime();
         LocalTime endTime = request.getEndTime();
         LocalDate bookingDate = request.getBookingDate();
-        AccountType accountType = request.getAccountType();
 
-        List<Account> availableAccounts = findAvailableAccounts(startTime, endTime, accountType, bookingDate);
+        List<Account> availableAccounts = findAvailableAccounts(GetAvailableAccountRequest
+                .builder()
+                .accountType(request.getAccountType())
+                .bookingDate(request.getBookingDate())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .build());
+
         if (availableAccounts.isEmpty()) {
             return Optional.empty();
         } else {

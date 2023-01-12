@@ -23,6 +23,8 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import static com.consultadd.slackzoom.services.impls.DynamoDbAccountService.*;
+import static com.consultadd.slackzoom.services.impls.DynamoDbBookingService.*;
 import static com.consultadd.slackzoom.utils.DateTimeUtils.ZONE_ID;
 
 @Component
@@ -40,7 +42,7 @@ public class SlackViews {
     private final AccountService accountService;
     private final BookingService bookingService;
 
-    public View getRequestModal(AccountType accountType) {
+    public View getBookingRequestView(AccountType accountType) {
         ViewTitle title = ViewTitle.builder()
                 .type(PLAIN_TEXT)
                 .text(accountType.getDisplayName())
@@ -62,45 +64,45 @@ public class SlackViews {
                         .build())
                 .build());
 
-        blocks.add(SectionBlock.builder()
-                .accessory(DatePickerElement.builder()
-                        .actionId("bookingDate")
+        blocks.add(InputBlock.builder()
+                .element(DatePickerElement.builder()
+                        .actionId(BOOKING_DATE)
                         .initialDate(DateTimeUtils.dateToString(LocalDate.now()))
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Select booking date")
                                 .build())
                         .build())
-                .text(PlainTextObject.builder()
+                .label(PlainTextObject.builder()
                         .text("Booking date")
                         .build())
                 .build());
 
-        blocks.add(SectionBlock.builder()
-                .accessory(TimePickerElement
+        blocks.add(InputBlock.builder()
+                .element(TimePickerElement
                         .builder()
-                        .actionId("startTime")
+                        .actionId(START_TIME)
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Select start time")
                                 .build())
                         .build())
-                .text(PlainTextObject
+                .label(PlainTextObject
                         .builder()
                         .text("Start time")
                         .build())
                 .build());
 
-        blocks.add(SectionBlock.builder()
-                .accessory(TimePickerElement
+        blocks.add(InputBlock.builder()
+                .element(TimePickerElement
                         .builder()
-                        .actionId("endTime")
+                        .actionId(END_TIME)
                         .placeholder(PlainTextObject
                                 .builder()
                                 .text("Select end time")
                                 .build())
                         .build())
-                .text(PlainTextObject
+                .label(PlainTextObject
                         .builder()
                         .text("End time")
                         .build())
@@ -117,7 +119,7 @@ public class SlackViews {
                 .build();
     }
 
-    public View addUpdateAccountView(Account account) {
+    public View addUpdateAccountDetailView(Account account) {
         ViewTitle title = ViewTitle.builder()
                 .type(PLAIN_TEXT)
                 .text(account == null ? "Add new account" : "Update account detail")
@@ -139,7 +141,7 @@ public class SlackViews {
                         .build())
                 .element(PlainTextInputElement
                         .builder()
-                        .actionId("accountName")
+                        .actionId(ACCOUNT_NAME)
                         .initialValue(Optional.ofNullable(account).map(Account::getAccountName).orElse(null))
                         .placeholder(PlainTextObject
                                 .builder()
@@ -170,7 +172,7 @@ public class SlackViews {
                         .build())
                 .element(StaticSelectElement
                         .builder()
-                        .actionId("accountType")
+                        .actionId(ACCOUNT_TYPE)
                         .initialOption(selectedOption)
                         .placeholder(PlainTextObject
                                 .builder()
@@ -186,7 +188,7 @@ public class SlackViews {
                         .build())
                 .element(PlainTextInputElement
                         .builder()
-                        .actionId("accountUsername")
+                        .actionId(USERNAME)
                         .initialValue(Optional.ofNullable(account).map(Account::getUsername).orElse(null))
                         .placeholder(PlainTextObject
                                 .builder()
@@ -200,7 +202,7 @@ public class SlackViews {
                         .build())
                 .element(PlainTextInputElement
                         .builder()
-                        .actionId("accountPassword")
+                        .actionId(PASSWORD)
                         .initialValue(Optional.ofNullable(account).map(Account::getPassword).orElse(null))
                         .placeholder(PlainTextObject
                                 .builder()
@@ -219,7 +221,7 @@ public class SlackViews {
                 .build();
     }
 
-    public List<LayoutBlock> getAccountStatus() {
+    public List<LayoutBlock> getAccountStatusMessageView() {
         List<LayoutBlock> blocks = new LinkedList<>();
         blocks.add(SectionBlock
                 .builder()
@@ -230,7 +232,7 @@ public class SlackViews {
                 .build());
         blocks.addAll(Stream
                 .of(AccountType.values())
-                .map(this::getAccountStatus)
+                .map(this::getAccountStatusMessageView)
                 .filter(b -> b.size() > 2)
                 .reduce((l1, l2) -> {
                     List<LayoutBlock> merge = new LinkedList<>(l1);
@@ -241,7 +243,7 @@ public class SlackViews {
         return blocks;
     }
 
-    private List<LayoutBlock> getAccountStatus(AccountType accountType) {
+    private List<LayoutBlock> getAccountStatusMessageView(AccountType accountType) {
         List<LayoutBlock> blocks = new LinkedList<>();
         blocks.add(SectionBlock
                 .builder()

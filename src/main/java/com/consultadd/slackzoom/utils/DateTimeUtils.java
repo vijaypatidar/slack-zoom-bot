@@ -20,8 +20,8 @@ public class DateTimeUtils {
     }
 
     public static LocalTime stringToLocalTime(String time) {
-        if (time.length()>5){
-            return LocalTime.parse(time,timeFormatter);
+        if (time.length() > 5) {
+            return LocalTime.parse(time, timeFormatter);
         }
         return LocalTime.parse(time, time24Formatter);
     }

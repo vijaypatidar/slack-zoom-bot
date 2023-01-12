@@ -14,6 +14,7 @@ import com.slack.api.bolt.handler.builtin.ViewSubmissionHandler;
 import com.slack.api.methods.request.chat.ChatDeleteRequest;
 import com.slack.api.methods.request.views.ViewsOpenRequest;
 import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
+import com.slack.api.model.block.LayoutBlock;
 import com.slack.api.model.block.SectionBlock;
 import com.slack.api.model.block.composition.MarkdownTextObject;
 import com.slack.api.model.block.composition.PlainTextObject;
@@ -30,6 +31,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import static com.consultadd.slackzoom.services.impls.DynamoDbAccountService.*;
+import static com.consultadd.slackzoom.services.impls.DynamoDbBookingService.*;
 
 @Configuration
 @RequiredArgsConstructor
@@ -39,6 +42,28 @@ public class SlackApp implements ApplicationEventPublisherAware {
     private final AccountService accountService;
     private final BookingService bookingService;
     private ApplicationEventPublisher applicationEventPublisher;
+
+    @Bean
+    public AppConfig loadSingleWorkspaceAppConfig() {
+        return AppConfig.builder()
+                .singleTeamBotToken(System.getenv("SLACK_BOT_TOKEN"))
+                .signingSecret(System.getenv("SLACK_SIGNING_SECRET"))
+                .build();
+    }
+
+    @Bean
+    public App initSlackApp(AppConfig config) {
+        App app = new App(config);
+        buildAccountTypesCommand(app);
+        buildClearCommand(app);
+        buildAccountAddCommand(app);
+        handleTimeBlocksEvent(app);
+        buildSaveViewCallbacks(app);
+        buildAddUpdateAccountViewCallbacks(app);
+        buildFreeAccountBlockAction(app);
+        handleBookAccountAction(app);
+        return app;
+    }
 
     private static void handleTimeBlocksEvent(App app) {
         app.blockAction(Pattern.compile(".*Time"), (req, context) -> context.ack());
@@ -60,33 +85,11 @@ public class SlackApp implements ApplicationEventPublisherAware {
         });
     }
 
-    @Bean
-    public App initSlackApp(AppConfig config) {
-        App app = new App(config);
-        buildAccountTypesCommand(app);
-        buildClearCommand(app);
-        buildAccountAddCommand(app);
-        handleTimeBlocksEvent(app);
-        buildSaveViewCallbacks(app);
-        buildAddUpdateAccountViewCallbacks(app);
-        buildFreeAccountBlockAction(app);
-        handleBookAccountAction(app);
-        return app;
-    }
-
     private void buildAddUpdateAccountViewCallbacks(App app) {
         app.viewSubmission(
                 SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK,
                 handleAddUpdateAccountViewSubmission(app)
         );
-    }
-
-    @Bean
-    public AppConfig loadSingleWorkspaceAppConfig() {
-        return AppConfig.builder()
-                .singleTeamBotToken(System.getenv("SLACK_BOT_TOKEN"))
-                .signingSecret(System.getenv("SLACK_SIGNING_SECRET"))
-                .build();
     }
 
     private void handleBookAccountAction(App app) {
@@ -103,7 +106,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
                             .builder()
                             .triggerId(req.getPayload().getTriggerId())
                             .token(ctx.getBotToken())
-                            .view(slackViews.getRequestModal(AccountType.valueOf(accountType)))
+                            .view(slackViews.getBookingRequestView(AccountType.valueOf(accountType)))
                             .build()
                     );
             return ctx.ack();
@@ -147,7 +150,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
                                 .builder()
                                 .triggerId(req.getPayload().getTriggerId())
                                 .token(ctx.getBotToken())
-                                .view(slackViews.getRequestModal(accountType))
+                                .view(slackViews.getBookingRequestView(accountType))
                                 .build()
                         );
                 return ctx.ack();
@@ -162,7 +165,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
                             .builder()
                             .triggerId(req.getPayload().getTriggerId())
                             .token(ctx.getBotToken())
-                            .view(slackViews.addUpdateAccountView(null))
+                            .view(slackViews.addUpdateAccountDetailView(null))
                             .build()
                     );
             return ctx.ack();
@@ -174,9 +177,9 @@ public class SlackApp implements ApplicationEventPublisherAware {
         return (req, ctx) -> {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
-            LocalTime startTime = DateTimeUtils.stringToLocalTime(state.get("startTime").getSelectedTime());
-            LocalTime endTime = DateTimeUtils.stringToLocalTime(state.get("endTime").getSelectedTime());
-            LocalDate bookingDate = DateTimeUtils.stringToDate(state.get("bookingDate").getSelectedDate());
+            LocalTime startTime = DateTimeUtils.stringToLocalTime(state.get(START_TIME).getSelectedTime());
+            LocalTime endTime = DateTimeUtils.stringToLocalTime(state.get(END_TIME).getSelectedTime());
+            LocalDate bookingDate = DateTimeUtils.stringToDate(state.get(BOOKING_DATE).getSelectedDate());
 
             BookingRequest bookingRequest = BookingRequest.builder()
                     .userId(req.getPayload().getUser().getId())
@@ -200,28 +203,29 @@ public class SlackApp implements ApplicationEventPublisherAware {
                         account.getPassword()
                 );
                 this.applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
+
+                List<LayoutBlock> blocks = List.of(
+                        SectionBlock.builder()
+                                .text(MarkdownTextObject
+                                        .builder()
+                                        .text(text)
+                                        .build())
+                                .accessory(ButtonElement
+                                        .builder()
+                                        .style(SlackViews.DANGER)
+                                        .text(PlainTextObject
+                                                .builder()
+                                                .text("Free Account")
+                                                .build())
+                                        .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
+                                        .value(booking.getBookingId())
+                                        .build())
+                                .build());
                 app.getClient()
                         .chatPostMessage(msg ->
-                                msg
-                                        .channel(req.getPayload().getUser().getId())
+                                msg.channel(req.getPayload().getUser().getId())
                                         .token(ctx.getBotToken())
-                                        .blocks(List.of(SectionBlock
-                                                .builder()
-                                                .text(MarkdownTextObject
-                                                        .builder()
-                                                        .text(text)
-                                                        .build())
-                                                .accessory(ButtonElement
-                                                        .builder()
-                                                        .style(SlackViews.DANGER)
-                                                        .text(PlainTextObject
-                                                                .builder()
-                                                                .text("Free Account")
-                                                                .build())
-                                                        .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
-                                                        .value(booking.getBookingId())
-                                                        .build())
-                                                .build()))
+                                        .blocks(blocks)
                         );
             } else {
                 return ctx.ackWithErrors(Map.of("endTimeBlock", "There is no account available for this time frame."));
@@ -236,10 +240,10 @@ public class SlackApp implements ApplicationEventPublisherAware {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
 
-            String accountName = state.get("accountName").getValue();
-            AccountType accountType = AccountType.valueOf(state.get("accountType").getSelectedOption().getValue());
-            String accountUsername = state.get("accountUsername").getValue();
-            String accountPassword = state.get("accountPassword").getValue();
+            String accountName = state.get(ACCOUNT_NAME).getValue();
+            AccountType accountType = AccountType.valueOf(state.get(ACCOUNT_TYPE).getSelectedOption().getValue());
+            String accountUsername = state.get(USERNAME).getValue();
+            String accountPassword = state.get(USERNAME).getValue();
             Account newAccount = Account.builder()
                     .accountType(accountType)
                     .accountName(accountName)
