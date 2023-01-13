@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
-public class ToolsBotConfigServiceImpl extends AbstractDynamoDbService implements ToolsBotConfigService {
+public class ToolsBotConfigServiceImpl extends AbstractDynamoDbService<Map<String,String>> implements ToolsBotConfigService {
     public static final String CHANNEL_ID = "channelId";
     public static final String TIME_STAMP = "ts";
     @Value(value = "${DB_TOOLS_BOT_CONFIG_TABLE_NAME}")
@@ -39,5 +39,20 @@ public class ToolsBotConfigServiceImpl extends AbstractDynamoDbService implement
                 .tableName(toolsBotConfigTableName)
                 .item(item).build();
         getDynamoDbClient().putItem(putItemRequest);
+    }
+
+    @Override
+    protected String getTableName() {
+        return this.toolsBotConfigTableName;
+    }
+
+    @Override
+    protected Map<String, String> toModal(Map<String, AttributeValue> item) {
+        return null;
+    }
+
+    @Override
+    protected Map<String, AttributeValue> toItem(Map<String, String> modal) {
+        return null;
     }
 }

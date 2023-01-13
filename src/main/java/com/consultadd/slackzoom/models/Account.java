@@ -17,5 +17,7 @@ public class Account {
     @Nonnull
     private String accountId;
     @Nonnull
+    private String ownerId;
+    @Nonnull
     private AccountType accountType;
 }

@@ -16,7 +16,6 @@ import com.slack.api.bolt.handler.builtin.ViewSubmissionHandler;
 import com.slack.api.methods.request.chat.ChatDeleteRequest;
 import com.slack.api.methods.request.views.ViewsOpenRequest;
 import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
-import com.slack.api.methods.response.views.ViewsOpenResponse;
 import com.slack.api.methods.response.views.ViewsUpdateResponse;
 import com.slack.api.model.block.LayoutBlock;
 import com.slack.api.model.block.SectionBlock;
@@ -78,7 +77,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
                             .builder()
                             .triggerId(req.getPayload().getTriggerId())
                             .token(ctx.getBotToken())
-                            .view(slackViews.getAccountDashboard())
+                            .view(slackViews.getAccountDashboard(req.getPayload().getUserId()))
                             .build()
                     );
             return ctx.ack();
@@ -282,13 +281,14 @@ public class SlackApp implements ApplicationEventPublisherAware {
                     .accountType(accountType)
                     .accountName(accountName)
                     .accountId(accountId)
+                    .ownerId(req.getPayload().getUser().getId())
                     .username(accountUsername)
                     .password(accountPassword)
                     .build();
             accountService.save(newAccount);
             applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
 
-            View accountDashboard = slackViews.getAccountDashboard();
+            View accountDashboard = slackViews.getAccountDashboard(req.getPayload().getUser().getId());
 
             return ctx.ack(ViewSubmissionResponse.builder()
                     .view(accountDashboard)

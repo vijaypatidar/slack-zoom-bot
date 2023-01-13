@@ -327,7 +327,7 @@ public class SlackViews {
         return blocks;
     }
 
-    public View getAccountDashboard() {
+    public View getAccountDashboard(String userId) {
         ViewTitle title = ViewTitle.builder()
                 .type(PLAIN_TEXT)
                 .text("Accounts Dashboard")
@@ -338,8 +338,12 @@ public class SlackViews {
                 .build();
         List<LayoutBlock> blocks = new LinkedList<>();
         blocks.add(DividerBlock.builder().build());
+        Map<AccountType, List<Account>> accountTypeListMap = accountService.getAccountsByOwnerId(userId)
+                .stream()
+                .collect(Collectors.groupingBy(Account::getAccountType));
+
         blocks.addAll(Stream.of(AccountType.values())
-                .map(this::getDashboardItemAccount)
+                .map(accountType -> getDashboardItemAccount(accountType, accountTypeListMap.getOrDefault(accountType, List.of())))
                 .reduce((l1, l2) -> {
                     List<LayoutBlock> merge = new LinkedList<>(l1);
                     merge.add(DividerBlock.builder().build());
@@ -355,7 +359,7 @@ public class SlackViews {
                 .build();
     }
 
-    private List<LayoutBlock> getDashboardItemAccount(AccountType accountType) {
+    private List<LayoutBlock> getDashboardItemAccount(AccountType accountType, List<Account> accounts) {
         List<LayoutBlock> blocks = new LinkedList<>();
         blocks.add(SectionBlock.builder()
                 .text(MarkdownTextObject.builder()
@@ -371,22 +375,21 @@ public class SlackViews {
                         .build())
                 .build());
         AtomicInteger count = new AtomicInteger(1);
-        accountService.findAccounts(accountType)
-                .forEach(account -> blocks.add(SectionBlock
+        accounts.forEach(account -> blocks.add(SectionBlock
+                .builder()
+                .text(MarkdownTextObject
                         .builder()
-                        .text(MarkdownTextObject
-                                .builder()
-                                .text(String.format("`%s.` %s", count.getAndIncrement(), account.getAccountName()))
-                                .build())
-                        .accessory(ButtonElement.builder()
-                                .text(PlainTextObject.builder()
-                                        .emoji(true)
-                                        .text("Edit").build())
-                                .style(PRIMARY)
-                                .value(account.getAccountId())
-                                .actionId(ACTION_EDIT_ACCOUNT_DETAIL)
-                                .build())
-                        .build()));
+                        .text(String.format("`%s.` %s", count.getAndIncrement(), account.getAccountName()))
+                        .build())
+                .accessory(ButtonElement.builder()
+                        .text(PlainTextObject.builder()
+                                .emoji(true)
+                                .text("Edit").build())
+                        .style(PRIMARY)
+                        .value(account.getAccountId())
+                        .actionId(ACTION_EDIT_ACCOUNT_DETAIL)
+                        .build())
+                .build()));
         return blocks;
     }
 }
