@@ -13,6 +13,7 @@ public interface AccountService {
     List<Account> findAccounts(AccountType accountType);
 
     Account getAccount(String accountId, AccountType accountType);
+    Account getAccountById(String accountId);
 
     List<Account> findAvailableAccounts(GetAvailableAccountRequest request);
 

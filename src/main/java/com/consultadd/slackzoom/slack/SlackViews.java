@@ -34,10 +34,13 @@ public class SlackViews {
     public static final String MODAL_VIEW = "modal";
     public static final String PLAIN_TEXT = "plain_text";
     public static final String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
-    public static final String ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK = "ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK";
+    public static final String ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK = "ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK:";
     public static final String DANGER = "danger";
     public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "ACTION_RELEASE_BOOKED_ACCOUNT";
     public static final String ACTION_BOOK_ACCOUNT_REQUEST = "ACTION_BOOK_ACCOUNT_REQUEST";
+    public static final String PRIMARY = "primary";
+    public static final String ACTION_EDIT_ACCOUNT_DETAIL = "EDIT_ACCOUNT_DETAIL";
+    public static final String DASHBOARD_VIEW_ID = "DASHBOARD_VIEW_ID";
 
     private final AccountService accountService;
     private final BookingService bookingService;
@@ -134,7 +137,6 @@ public class SlackViews {
                 .build();
 
         List<LayoutBlock> blocks = new LinkedList<>();
-
         blocks.add(InputBlock.builder()
                 .label(PlainTextObject.builder()
                         .text("Account name")
@@ -213,7 +215,8 @@ public class SlackViews {
 
         return View.builder()
                 .type(MODAL_VIEW)
-                .callbackId(ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK)
+                .callbackId(ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK +
+                        Optional.ofNullable(account).map(Account::getAccountId).orElse(""))
                 .title(title)
                 .submit(submit)
                 .close(close)
@@ -223,11 +226,11 @@ public class SlackViews {
 
     public List<LayoutBlock> getAccountStatusMessageView() {
         List<LayoutBlock> blocks = new LinkedList<>();
-        blocks.add(SectionBlock
+        blocks.add(HeaderBlock
                 .builder()
-                .text(MarkdownTextObject
+                .text(PlainTextObject
                         .builder()
-                        .text("*Accounts status*")
+                        .text("Accounts status")
                         .build())
                 .build());
         blocks.addAll(Stream
@@ -314,13 +317,76 @@ public class SlackViews {
                         .builder()
                         .actionId(ACTION_BOOK_ACCOUNT_REQUEST)
                         .value(accountType.getType())
-                        .style("primary")
+                        .style(PRIMARY)
                         .text(PlainTextObject
                                 .builder()
                                 .text("Need account")
                                 .build())
                         .build()))
                 .build());
+        return blocks;
+    }
+
+    public View getAccountDashboard() {
+        ViewTitle title = ViewTitle.builder()
+                .type(PLAIN_TEXT)
+                .text("Accounts Dashboard")
+                .build();
+        ViewClose close = ViewClose.builder()
+                .type(PLAIN_TEXT)
+                .text("Close")
+                .build();
+        List<LayoutBlock> blocks = new LinkedList<>();
+        blocks.add(DividerBlock.builder().build());
+        blocks.addAll(Stream.of(AccountType.values())
+                .map(this::getDashboardItemAccount)
+                .reduce((l1, l2) -> {
+                    List<LayoutBlock> merge = new LinkedList<>(l1);
+                    merge.add(DividerBlock.builder().build());
+                    merge.addAll(l2);
+                    return merge;
+                }).orElse(List.of()));
+        return View.builder()
+                .type(MODAL_VIEW)
+                .callbackId(ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK)
+                .title(title)
+                .close(close)
+                .blocks(blocks)
+                .build();
+    }
+
+    private List<LayoutBlock> getDashboardItemAccount(AccountType accountType) {
+        List<LayoutBlock> blocks = new LinkedList<>();
+        blocks.add(SectionBlock.builder()
+                .text(MarkdownTextObject.builder()
+                        .text("*" + accountType.getDisplayName() + "*").build())
+                .accessory(ButtonElement
+                        .builder()
+                        .text(PlainTextObject
+                                .builder()
+                                .text("Add new")
+                                .build())
+                        .actionId(ACTION_EDIT_ACCOUNT_DETAIL)
+                        .style(PRIMARY)
+                        .build())
+                .build());
+        AtomicInteger count = new AtomicInteger(1);
+        accountService.findAccounts(accountType)
+                .forEach(account -> blocks.add(SectionBlock
+                        .builder()
+                        .text(MarkdownTextObject
+                                .builder()
+                                .text(String.format("`%s.` %s", count.getAndIncrement(), account.getAccountName()))
+                                .build())
+                        .accessory(ButtonElement.builder()
+                                .text(PlainTextObject.builder()
+                                        .emoji(true)
+                                        .text("Edit").build())
+                                .style(PRIMARY)
+                                .value(account.getAccountId())
+                                .actionId(ACTION_EDIT_ACCOUNT_DETAIL)
+                                .build())
+                        .build()));
         return blocks;
     }
 }

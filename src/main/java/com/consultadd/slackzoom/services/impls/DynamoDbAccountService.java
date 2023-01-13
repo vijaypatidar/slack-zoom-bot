@@ -15,10 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
-import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
-import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.*;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +54,21 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
     @Override
     public Account getAccount(String accountId, AccountType accountType) {
         return findAccounts(accountType).stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
+    }
+
+    @Override
+    public Account getAccountById(String accountId) {
+        Map<String, AttributeValue> key =
+                Map.of(ACCOUNT_ID, AttributeValue.builder().s(accountId).build());
+        GetItemRequest getItemRequest = GetItemRequest
+                .builder()
+                .tableName(accountsTableName)
+                .key(key)
+                .build();
+        GetItemResponse item = getDynamoDbClient().getItem(getItemRequest);
+        if (item.hasItem()) {
+            return toAccount(item.item());
+        } else throw new RuntimeException("Account not found");
     }
 
     @Override
