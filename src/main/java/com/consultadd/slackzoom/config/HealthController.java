@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthController {
 
     @GetMapping
-    Map<String, Object> health(){
+    Map<String, Object> health() {
         return Map.of(
-                "server_time",new Date(),
-                "health_check","passed"
+                "server_time", new Date(),
+                "health_check", "passed"
         );
     }
 

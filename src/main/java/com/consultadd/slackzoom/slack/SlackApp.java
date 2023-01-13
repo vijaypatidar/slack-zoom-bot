@@ -47,6 +47,26 @@ public class SlackApp implements ApplicationEventPublisherAware {
     private final BookingService bookingService;
     private ApplicationEventPublisher applicationEventPublisher;
 
+    private static void handleTimeBlocksEvent(App app) {
+        app.blockAction(Pattern.compile(".*Time"), (req, context) -> context.ack());
+        app.blockAction(Pattern.compile(".*Date"), (req, context) -> context.ack());
+    }
+
+    private static void buildClearCommand(App app) {
+        app.command("/clear", (req, ctx) -> {
+            ConversationsHistoryResponse conversationsHistoryResponse = app.getClient()
+                    .conversationsHistory(builder -> builder.channel(ctx.getChannelId()).token(ctx.getBotToken()));
+            conversationsHistoryResponse.getMessages().parallelStream().forEach(message -> {
+                try {
+                    app.getClient().chatDelete(ChatDeleteRequest.builder().channel(ctx.getChannelId()).token(ctx.getBotToken()).ts(message.getTs()).build());
+                } catch (Exception e) {
+                    log.error("Error while deleting message", e);
+                }
+            });
+            return ctx.ack();
+        });
+    }
+
     @Bean
     public AppConfig loadSingleWorkspaceAppConfig() {
         return AppConfig.builder()
@@ -84,29 +104,9 @@ public class SlackApp implements ApplicationEventPublisherAware {
         });
     }
 
-    private static void handleTimeBlocksEvent(App app) {
-        app.blockAction(Pattern.compile(".*Time"), (req, context) -> context.ack());
-        app.blockAction(Pattern.compile(".*Date"), (req, context) -> context.ack());
-    }
-
-    private static void buildClearCommand(App app) {
-        app.command("/clear", (req, ctx) -> {
-            ConversationsHistoryResponse conversationsHistoryResponse = app.getClient()
-                    .conversationsHistory(builder -> builder.channel(ctx.getChannelId()).token(ctx.getBotToken()));
-            conversationsHistoryResponse.getMessages().parallelStream().forEach(message -> {
-                try {
-                    app.getClient().chatDelete(ChatDeleteRequest.builder().channel(ctx.getChannelId()).token(ctx.getBotToken()).ts(message.getTs()).build());
-                } catch (Exception e) {
-                    log.error("Error while deleting message", e);
-                }
-            });
-            return ctx.ack();
-        });
-    }
-
     private void buildAddUpdateAccountViewCallbacks(App app) {
         app.viewSubmission(
-                Pattern.compile(SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK+".*"),
+                Pattern.compile(SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK + ".*"),
                 handleAddUpdateAccountViewSubmission(app)
         );
     }
@@ -266,11 +266,11 @@ public class SlackApp implements ApplicationEventPublisherAware {
             Map<String, ViewState.Value> state = new HashMap<>();
             req.getPayload().getView().getState().getValues().values().forEach(state::putAll);
             String callbackId = req.getPayload().getView().getCallbackId();
-            log.error("callbackId:{}",callbackId);
+            log.error("callbackId:{}", callbackId);
             String accountId;
-            if (!SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK.equals(callbackId)){
-                accountId = callbackId.replace(SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK,"");
-            }else {
+            if (!SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK.equals(callbackId)) {
+                accountId = callbackId.replace(SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK, "");
+            } else {
                 accountId = UUID.randomUUID().toString();
             }
             String accountName = state.get(ACCOUNT_NAME).getValue();

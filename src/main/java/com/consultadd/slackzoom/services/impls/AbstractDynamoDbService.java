@@ -37,9 +37,9 @@ public abstract class AbstractDynamoDbService<T> {
 
     protected List<T> scan(String filterExpression, Map<String, AttributeValue> expressionAttributeValues) {
         return getDynamoDbClient().scan(ScanRequest.builder()
-                .filterExpression(filterExpression)
-                .expressionAttributeValues(expressionAttributeValues)
-                .tableName(getTableName()).build())
+                        .filterExpression(filterExpression)
+                        .expressionAttributeValues(expressionAttributeValues)
+                        .tableName(getTableName()).build())
                 .items().stream().map(this::toModal).toList();
     }
 
@@ -51,7 +51,7 @@ public abstract class AbstractDynamoDbService<T> {
                 .build());
     }
 
-    protected DeleteItemResponse deleteItem(Map<String,AttributeValue> key){
+    protected DeleteItemResponse deleteItem(Map<String, AttributeValue> key) {
         DeleteItemRequest deleteItemRequest = DeleteItemRequest
                 .builder()
                 .tableName(getTableName())
