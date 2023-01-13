@@ -29,7 +29,7 @@ public class ToolsBotEventListener implements ApplicationListener<ApplicationEve
     String botUpdateChannelId;
     private ChatPostMessageResponse response = null;
 
-    @Scheduled(initialDelay = 1000, fixedDelay = 20000)
+    @Scheduled(initialDelay = 1000, fixedDelay = 30000)
     public void updateChannel() throws SlackApiException, IOException {
         if (response == null) {
             ChatPostMessageResponse chatPostMessageResponse = app.getClient()

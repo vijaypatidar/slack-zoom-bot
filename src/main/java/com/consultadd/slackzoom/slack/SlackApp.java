@@ -219,7 +219,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
             Optional<Booking> optionalBooking = accountService.bookAvailableAccount(bookingRequest);
             if (optionalBooking.isPresent()) {
                 Booking booking = optionalBooking.get();
-                Account account = accountService.getAccount(booking.getAccountId(), accountType);
+                Account account = accountService.getAccountById(booking.getAccountId());
                 String text = String.format(
                         "You can use this account from %s to %s EST on %s.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
                         DateTimeUtils.timeToString(bookingRequest.getStartTime()),

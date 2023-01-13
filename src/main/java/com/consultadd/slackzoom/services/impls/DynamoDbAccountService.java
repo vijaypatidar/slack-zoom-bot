@@ -52,11 +52,6 @@ public class DynamoDbAccountService extends AbstractDynamoDbService implements A
     }
 
     @Override
-    public Account getAccount(String accountId, AccountType accountType) {
-        return findAccounts(accountType).stream().filter(za -> za.getAccountId().equals(accountId)).findAny().orElseThrow();
-    }
-
-    @Override
     public Account getAccountById(String accountId) {
         Map<String, AttributeValue> key =
                 Map.of(ACCOUNT_ID, AttributeValue.builder().s(accountId).build());
