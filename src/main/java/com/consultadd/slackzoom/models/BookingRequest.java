@@ -1,5 +1,6 @@
 package com.consultadd.slackzoom.models;
 
+import com.consultadd.slackzoom.enums.AccountType;
 import jakarta.annotation.Nonnull;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -8,7 +9,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class Booking {
+public class BookingRequest {
     @Nonnull
     LocalTime startTime;
     @Nonnull
@@ -16,9 +17,7 @@ public class Booking {
     @Nonnull
     String userId;
     @Nonnull
-    String bookingId;
-    @Nonnull
-    String accountId;
-    @Nonnull
     LocalDate bookingDate;
+    @Nonnull
+    AccountType accountType;
 }

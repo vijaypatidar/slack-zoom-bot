@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ZoomBootEventListener implements ApplicationListener<ApplicationEvent> {
+public class ToolsBotEventListener implements ApplicationListener<ApplicationEvent> {
     private final App app;
     private final AppConfig config;
     private final SlackViews slackViews;
@@ -29,25 +29,28 @@ public class ZoomBootEventListener implements ApplicationListener<ApplicationEve
     String botUpdateChannelId;
     private ChatPostMessageResponse response = null;
 
-    @Scheduled(initialDelay = 5000, fixedDelay = 20000)
+    @Scheduled(initialDelay = 1000, fixedDelay = 20000)
     public void updateChannel() throws SlackApiException, IOException {
         if (response == null) {
             ChatPostMessageResponse chatPostMessageResponse = app.getClient()
                     .chatPostMessage(req -> req.channel(botUpdateChannelId)
-                            .blocks(slackViews.getAccountStatus())
+                            .blocks(slackViews.getAccountStatusMessageView())
                             .token(config.getSingleTeamBotToken()));
             if (chatPostMessageResponse.isOk()) {
                 this.response = chatPostMessageResponse;
+            } else {
+                log.error("ChatPostMessageResponse:{}", chatPostMessageResponse);
             }
-            log.info("ChatPostMessageResponse:{}", chatPostMessageResponse);
         } else {
             ChatUpdateResponse chatUpdateResponse = app.getClient()
                     .chatUpdate(ChatUpdateRequest.builder()
                             .channel(botUpdateChannelId)
                             .ts(this.response.getTs())
-                            .blocks(slackViews.getAccountStatus())
+                            .blocks(slackViews.getAccountStatusMessageView())
                             .token(config.getSingleTeamBotToken()).build());
-            log.info("ChatUpdateResponse:{}", chatUpdateResponse);
+            if (!chatUpdateResponse.isOk()) {
+                log.error("ChatUpdateResponse:{}", chatUpdateResponse);
+            }
         }
     }
 

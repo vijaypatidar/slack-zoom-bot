@@ -1,19 +1,21 @@
 package com.consultadd.slackzoom.models;
 
 import com.consultadd.slackzoom.enums.AccountType;
-import lombok.AllArgsConstructor;
+import jakarta.annotation.Nonnull;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @Data
 public class Account {
+    @Nonnull
     private String accountName;
+    @Nonnull
     private String username;
+    @Nonnull
     private String password;
+    @Nonnull
     private String accountId;
+    @Nonnull
     private AccountType accountType;
 }
