@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.config;
+package com.consultadd.slackzoom.controllers;
 
 import java.util.Date;
 import java.util.Map;
