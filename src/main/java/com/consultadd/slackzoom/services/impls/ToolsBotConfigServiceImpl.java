@@ -53,11 +53,11 @@ public class ToolsBotConfigServiceImpl extends AbstractDynamoDbService<Map<Strin
 
     @Override
     protected Map<String, String> toModal(Map<String, AttributeValue> item) {
-        return null;
+        return Map.of();
     }
 
     @Override
     protected Map<String, AttributeValue> toItem(Map<String, String> modal) {
-        return null;
+        return Map.of();
     }
 }
