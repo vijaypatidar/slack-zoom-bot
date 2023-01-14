@@ -18,10 +18,6 @@ import com.slack.api.methods.request.views.ViewsOpenRequest;
 import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
 import com.slack.api.methods.response.views.ViewsUpdateResponse;
 import com.slack.api.model.block.LayoutBlock;
-import com.slack.api.model.block.SectionBlock;
-import com.slack.api.model.block.composition.MarkdownTextObject;
-import com.slack.api.model.block.composition.PlainTextObject;
-import com.slack.api.model.block.element.ButtonElement;
 import com.slack.api.model.view.View;
 import com.slack.api.model.view.ViewState;
 import java.time.LocalDate;
@@ -218,35 +214,8 @@ public class SlackApp implements ApplicationEventPublisherAware {
             Optional<Booking> optionalBooking = accountService.bookAvailableAccount(bookingRequest);
             if (optionalBooking.isPresent()) {
                 Booking booking = optionalBooking.get();
-                Account account = accountService.getAccountById(booking.getAccountId());
-                String text = String.format(
-                        "You can use this account from %s to %s EST on %s.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
-                        DateTimeUtils.timeToString(bookingRequest.getStartTime()),
-                        DateTimeUtils.timeToString(bookingRequest.getEndTime()),
-                        DateTimeUtils.dateToString(bookingRequest.getBookingDate()),
-                        account.getAccountName(),
-                        account.getUsername(),
-                        account.getPassword()
-                );
                 this.applicationEventPublisher.publishEvent(new AccountStatusChangeEvent(this));
-
-                List<LayoutBlock> blocks = List.of(
-                        SectionBlock.builder()
-                                .text(MarkdownTextObject
-                                        .builder()
-                                        .text(text)
-                                        .build())
-                                .accessory(ButtonElement
-                                        .builder()
-                                        .style(SlackViews.DANGER)
-                                        .text(PlainTextObject
-                                                .builder()
-                                                .text("Free Account")
-                                                .build())
-                                        .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
-                                        .value(booking.getBookingId())
-                                        .build())
-                                .build());
+                List<LayoutBlock> blocks = slackViews.getAccountBookedResponseMessageBlocks(booking);
                 app.getClient()
                         .chatPostMessage(msg ->
                                 msg.channel(req.getPayload().getUser().getId())
@@ -259,6 +228,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
             return ctx.ack();
         };
     }
+
 
     @NotNull
     private ViewSubmissionHandler handleAddUpdateAccountViewSubmission(App app) {

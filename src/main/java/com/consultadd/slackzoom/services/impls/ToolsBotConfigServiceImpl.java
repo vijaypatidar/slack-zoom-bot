@@ -1,18 +1,23 @@
 package com.consultadd.slackzoom.services.impls;
 
 import com.consultadd.slackzoom.services.ToolsBotConfigService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
+@RequiredArgsConstructor
 public class ToolsBotConfigServiceImpl extends AbstractDynamoDbService<Map<String, String>> implements ToolsBotConfigService {
     public static final String CHANNEL_ID = "channelId";
     public static final String TIME_STAMP = "ts";
+
+    private final ObjectMapper objectMapper;
     @Value(value = "${DB_TOOLS_BOT_CONFIG_TABLE_NAME}")
     String toolsBotConfigTableName;
 

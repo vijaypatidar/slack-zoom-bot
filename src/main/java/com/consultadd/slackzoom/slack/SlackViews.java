@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import static com.consultadd.slackzoom.services.impls.DynamoDbAccountService.*;
 import static com.consultadd.slackzoom.services.impls.DynamoDbBookingService.*;
@@ -235,6 +236,7 @@ public class SlackViews {
                 .build());
         blocks.addAll(Stream
                 .of(AccountType.values())
+                .filter(accountType -> !accountType.isBlocking())
                 .map(this::getAccountStatusMessageView)
                 .filter(b -> b.size() > 2)
                 .reduce((l1, l2) -> {
@@ -391,5 +393,36 @@ public class SlackViews {
                         .build())
                 .build()));
         return blocks;
+    }
+
+    @NotNull
+    public List<LayoutBlock> getAccountBookedResponseMessageBlocks(Booking booking) {
+        Account account = accountService.getAccountById(booking.getAccountId());
+        String text = String.format(
+                "You can use this account from %s to %s EST on %s.%n```%s%nUsername: %s%nPassword: %s```%n Please update the account state to available, if it get free before the expected end time or if not need anymore.",
+                DateTimeUtils.timeToString(booking.getStartTime()),
+                DateTimeUtils.timeToString(booking.getEndTime()),
+                DateTimeUtils.dateToString(booking.getBookingDate()),
+                account.getAccountName(),
+                account.getUsername(),
+                account.getPassword()
+        );
+        return List.of(
+                SectionBlock.builder()
+                        .text(MarkdownTextObject
+                                .builder()
+                                .text(text)
+                                .build())
+                        .accessory(ButtonElement
+                                .builder()
+                                .style(SlackViews.DANGER)
+                                .text(PlainTextObject
+                                        .builder()
+                                        .text("Free Account")
+                                        .build())
+                                .actionId(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT)
+                                .value(booking.getBookingId())
+                                .build())
+                        .build());
     }
 }

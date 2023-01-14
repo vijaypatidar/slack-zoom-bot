@@ -1,14 +1,18 @@
 package com.consultadd.slackzoom.enums;
 
 public enum AccountType {
-    ZOOM("ZOOM", "Zoom Account"),
-    GV("GV", "Google voice");
+    ZOOM("ZOOM", "Zoom Account", true),
+    GV("GV", "Google voice", true),
+    VPN("VPN", "VPN Account", false);
     private final String displayName;
     private final String type;
 
-    AccountType(String type, String displayName) {
+    private final boolean blocking;
+
+    AccountType(String type, String displayName, boolean blocking) {
         this.displayName = displayName;
         this.type = type;
+        this.blocking = blocking;
     }
 
     public String getDisplayName() {
@@ -17,5 +21,9 @@ public enum AccountType {
 
     public String getType() {
         return type;
+    }
+
+    public boolean isBlocking() {
+        return blocking;
     }
 }

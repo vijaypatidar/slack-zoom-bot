@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -68,16 +67,11 @@ public class DynamoDbAccountService extends AbstractDynamoDbService<Account> imp
             String matchAccountType = "accountType = :accountType";
             Map<String, AttributeValue> filters = new HashMap<>();
             filters.put(":accountType", AttributeValue.builder().s(accountType.getType()).build());
-            return getAccounts(matchAccountType, filters);
+            return scan(matchAccountType, filters);
         } catch (Exception e) {
             log.error("Error scanning accounts table:{}", accountsTableName, e);
             return List.of();
         }
-    }
-
-    @NotNull
-    private List<Account> getAccounts(String matchAccountType, Map<String, AttributeValue> filters) {
-        return scan(matchAccountType, filters);
     }
 
     @Override
@@ -93,7 +87,7 @@ public class DynamoDbAccountService extends AbstractDynamoDbService<Account> imp
             String matchAccountType = "ownerId = :ownerId";
             Map<String, AttributeValue> filters = new HashMap<>();
             filters.put(":ownerId", AttributeValue.builder().s(ownerId).build());
-            return getAccounts(matchAccountType, filters);
+            return scan(matchAccountType, filters);
         } catch (Exception e) {
             log.error("Error scanning accounts table by owner id:{}", accountsTableName, e);
             return List.of();
@@ -116,18 +110,20 @@ public class DynamoDbAccountService extends AbstractDynamoDbService<Account> imp
         Map<String, List<Booking>> accountIdToBookingsMap = getAccountIdToBookingsMap(accountType, bookingDate);
         return findAccounts(accountType).stream().filter(account -> {
             for (Booking booking : accountIdToBookingsMap.getOrDefault(account.getAccountId(), new LinkedList<>())) {
-                if (
-                        booking.getStartTime().isBefore(startTime) && startTime.isBefore(booking.getEndTime())
-                                || booking.getStartTime().isBefore(endTime) && endTime.isBefore(booking.getEndTime())
-                                || startTime.isBefore(booking.getStartTime()) && booking.getStartTime().isBefore(endTime)
-                                || startTime.isBefore(booking.getEndTime()) && booking.getEndTime().isBefore(endTime)
-                                || booking.getStartTime().equals(startTime) || booking.getEndTime().equals(endTime)
-                ) {
+                if (isOverlappingTime(startTime, endTime, booking.getStartTime(), booking.getEndTime())) {
                     return false;
                 }
             }
             return true;
         }).toList();
+    }
+
+    private boolean isOverlappingTime(LocalTime startTime1, LocalTime endTime1, LocalTime startTime2, LocalTime endTime2) {
+        return startTime2.isBefore(startTime1) && startTime1.isBefore(endTime2)
+                || startTime2.isBefore(endTime1) && endTime1.isBefore(endTime2)
+                || startTime1.isBefore(startTime2) && startTime2.isBefore(endTime1)
+                || startTime1.isBefore(startTime2) && endTime2.isBefore(endTime1)
+                || startTime2.equals(startTime1) || endTime2.equals(endTime1);
     }
 
     @Override
