@@ -246,7 +246,7 @@ public class SlackApp implements ApplicationEventPublisherAware {
             String accountName = state.get(ACCOUNT_NAME).getValue();
             AccountType accountType = AccountType.valueOf(state.get(ACCOUNT_TYPE).getSelectedOption().getValue());
             String accountUsername = state.get(USERNAME).getValue();
-            String accountPassword = state.get(USERNAME).getValue();
+            String accountPassword = state.get(PASSWORD).getValue();
             Account newAccount = Account.builder()
                     .accountType(accountType)
                     .accountName(accountName)
