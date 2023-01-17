@@ -236,7 +236,7 @@ public class SlackViews {
                 .build());
         blocks.addAll(Stream
                 .of(AccountType.values())
-                .filter(accountType -> !accountType.isBlocking())
+                .filter(AccountType::isBlocking)
                 .map(this::getAccountStatusMessageView)
                 .filter(b -> b.size() > 2)
                 .reduce((l1, l2) -> {
