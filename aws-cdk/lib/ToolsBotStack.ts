@@ -105,7 +105,7 @@ export class ToolsSlackBotStack extends cdk.Stack {
       },
       {
         key: "SERVER_PORT",
-        value: "80",
+        value: "5000",
       },
     ];
 
