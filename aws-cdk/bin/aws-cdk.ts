@@ -4,6 +4,6 @@ import * as cdk from "aws-cdk-lib";
 import { ToolsSlackBotStack } from "../lib/ToolsBotStack";
 
 const app = new cdk.App();
-new ToolsSlackBotStack(app, "DemoStack", {
+new ToolsSlackBotStack(app, "ToolsBot", {
   stage: "dev",
 });
