@@ -30,6 +30,9 @@ export class ToolsSlackBotStack extends cdk.Stack {
       tableName: `slack-tools-bot-bookings-${stage}`,
     });
 
+    accountsTable.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+    bookingsTable.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+
     const EbInstanceRole = new iam.Role(
       this,
       `${appName}-aws-elasticbeanstalk-ec2-role`,
@@ -37,6 +40,7 @@ export class ToolsSlackBotStack extends cdk.Stack {
         assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
       }
     );
+
     bookingsTable.grantReadWriteData(EbInstanceRole);
     accountsTable.grantReadWriteData(EbInstanceRole);
 
@@ -78,7 +82,6 @@ export class ToolsSlackBotStack extends cdk.Stack {
       value: string;
     }
 
-    console.log(process.env);
     const environmentVaribles: Env[] = [
       {
         key: "DB_ACCOUNTS_TABLE_NAME",
@@ -90,15 +93,19 @@ export class ToolsSlackBotStack extends cdk.Stack {
       },
       {
         key: "SLACK_BOT_TOKEN",
-        value: "DUMMY_VALUE",
+        value: "xoxb-4623273785473-4625409455686-H9LFqmolAoXgfVgQCsMGMInR",
       },
       {
         key: "SLACK_SIGNING_SECRET",
-        value: "DUMMY_VALUE",
+        value: "d6dbd595e1800fcf47099aaa61e827d2",
       },
       {
         key: "BOT_UPDATE_CHANNEL_ID",
-        value: "DUMMY_VALUE",
+        value: "C04HS17S0JJ",
+      },
+      {
+        key: "SERVER_PORT",
+        value: "80",
       },
     ];
 
@@ -135,21 +142,22 @@ export class ToolsSlackBotStack extends cdk.Stack {
           optionName: "InstanceTypes",
           value: "t2.micro",
         },
+        {
+          namespace: "aws:elb:healthcheck",
+          optionName: "Target",
+          value: "/health",
+        },
         ...buidOptionsFromEnv(),
-        // {
-        //   namespace: "elasticbeanstalk:application",
-        //   optionName: "Application Healthcheck URL",
-        //   value: "/health",
-        // },
       ];
 
     const elbEnv = new elasticbeanstalk.CfnEnvironment(this, "Environment", {
       environmentName: `${appName}-${stage}-env`,
       applicationName: app.applicationName || appName,
-      solutionStackName: "64bit Amazon Linux 2 v3.4.3 running Corretto 11",
+      solutionStackName: "64bit Amazon Linux 2 v3.4.3 running Corretto 17",
       optionSettings: optionSettingProperties,
       versionLabel: appVersionProps.ref,
     });
+
     elbEnv.addDependency(app);
   }
 }
