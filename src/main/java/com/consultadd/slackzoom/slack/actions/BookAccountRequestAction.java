@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.slack.view.actions;
+package com.consultadd.slackzoom.slack.actions;
 
 import com.consultadd.slackzoom.enums.AccountType;
 import com.slack.api.bolt.context.builtin.ActionContext;
@@ -33,7 +33,7 @@ public class BookAccountRequestAction extends AbstractBlockActionHandler {
     }
 
     @Override
-    public String getActionName() {
+    public String getActionNameRegex() {
         return ACTION_BOOK_ACCOUNT_REQUEST;
     }
 }

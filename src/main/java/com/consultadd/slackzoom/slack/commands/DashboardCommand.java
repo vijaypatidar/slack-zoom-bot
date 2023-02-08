@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.slack.view.commands;
+package com.consultadd.slackzoom.slack.commands;
 
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;

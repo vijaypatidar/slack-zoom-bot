@@ -1,6 +1,5 @@
 package com.consultadd.slackzoom.slack;
 
-import com.consultadd.slackzoom.slack.view.RegistrableComponent;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
 import lombok.RequiredArgsConstructor;

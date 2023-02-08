@@ -1,11 +1,10 @@
-package com.consultadd.slackzoom.slack.view.submisions;
+package com.consultadd.slackzoom.slack.submissions;
 
 import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
 import com.consultadd.slackzoom.models.Booking;
 import com.consultadd.slackzoom.models.BookingRequest;
 import com.consultadd.slackzoom.utils.DateTimeUtils;
-import com.slack.api.bolt.App;
 import com.slack.api.bolt.context.builtin.ViewSubmissionContext;
 import com.slack.api.bolt.request.builtin.ViewSubmissionRequest;
 import com.slack.api.bolt.response.Response;
@@ -19,7 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -65,12 +63,7 @@ public class AccountRequestViewSubmission extends AbstractViewSubmissionHandler 
     }
 
     @Override
-    String getCallbackId() {
-        return SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK;
-    }
-
-    @Override
-    public void register(App app) {
-        app.viewSubmission(Pattern.compile(getCallbackId() + ".*"), this);
+    String getCallbackIdRegex() {
+        return SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + ".*";
     }
 }

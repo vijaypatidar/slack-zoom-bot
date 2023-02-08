@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.slack.view.actions;
+package com.consultadd.slackzoom.slack.actions;
 
 import com.consultadd.slackzoom.models.Account;
 import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload;
@@ -36,7 +36,7 @@ public class AddUpdateAccountDetailAction extends AbstractBlockActionHandler {
     }
 
     @Override
-    public String getActionName() {
+    public String getActionNameRegex() {
         return ACTION_EDIT_ACCOUNT_DETAIL;
     }
 

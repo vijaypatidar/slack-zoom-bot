@@ -1,7 +1,8 @@
-package com.consultadd.slackzoom.slack.view;
+package com.consultadd.slackzoom.slack;
 
 import com.consultadd.slackzoom.services.AccountService;
 import com.consultadd.slackzoom.services.BookingService;
+import com.consultadd.slackzoom.slack.view.SlackViews;
 import com.slack.api.bolt.App;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;

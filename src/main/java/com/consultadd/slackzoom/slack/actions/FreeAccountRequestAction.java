@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.slack.view.actions;
+package com.consultadd.slackzoom.slack.actions;
 
 import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
 import com.slack.api.bolt.context.builtin.ActionContext;
@@ -31,7 +31,7 @@ public class FreeAccountRequestAction extends AbstractBlockActionHandler {
     }
 
     @Override
-    String getActionName() {
+    String getActionNameRegex() {
         return ACTION_RELEASE_BOOKED_ACCOUNT;
     }
 
