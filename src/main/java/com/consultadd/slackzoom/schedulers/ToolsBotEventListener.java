@@ -39,6 +39,7 @@ public class ToolsBotEventListener implements ApplicationListener<ApplicationEve
             if (chatPostMessageResponse.isOk()) {
                 this.response = chatPostMessageResponse;
             } else {
+                this.response = null;
                 log.error("ChatPostMessageResponse:{}", chatPostMessageResponse);
             }
         } else {
