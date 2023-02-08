@@ -39,7 +39,6 @@ public class ToolsBotEventListener implements ApplicationListener<ApplicationEve
             if (chatPostMessageResponse.isOk()) {
                 this.response = chatPostMessageResponse;
             } else {
-                this.response = null;
                 log.error("ChatPostMessageResponse:{}", chatPostMessageResponse);
             }
         } else {
@@ -50,6 +49,7 @@ public class ToolsBotEventListener implements ApplicationListener<ApplicationEve
                             .blocks(slackViews.getAccountStatusMessageView())
                             .token(config.getSingleTeamBotToken()).build());
             if (!chatUpdateResponse.isOk()) {
+                this.response = null;
                 log.error("ChatUpdateResponse:{}", chatUpdateResponse);
             }
         }
