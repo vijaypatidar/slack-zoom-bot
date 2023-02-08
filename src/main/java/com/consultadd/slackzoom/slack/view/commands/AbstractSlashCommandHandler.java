@@ -9,6 +9,6 @@ public abstract class AbstractSlashCommandHandler extends AbstractRegistrableCom
     public abstract String getCommandName();
     @Override
     public void register(App app) {
-        app.command("/"+getCommandName(),this);
+        app.command("/"+getCommandName().toLowerCase(),this);
     }
 }

@@ -5,6 +5,7 @@ import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
 import com.consultadd.slackzoom.models.Account;
 import com.consultadd.slackzoom.slack.view.SlackViews;
 import com.slack.api.app_backend.views.response.ViewSubmissionResponse;
+import com.slack.api.bolt.App;
 import com.slack.api.bolt.context.builtin.ViewSubmissionContext;
 import com.slack.api.bolt.request.builtin.ViewSubmissionRequest;
 import com.slack.api.bolt.response.Response;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import static com.consultadd.slackzoom.services.impls.DynamoDbAccountService.*;
@@ -61,5 +63,9 @@ public class AddUpdateAccountViewSubmission extends AbstractViewSubmissionHandle
     @Override
     String getCallbackId() {
         return ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK;
+    }
+    @Override
+    public void register(App app) {
+        app.viewSubmission(Pattern.compile(getCallbackId() + ".*"), this);
     }
 }
