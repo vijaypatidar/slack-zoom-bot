@@ -11,6 +11,7 @@ import com.slack.api.methods.response.views.ViewsUpdateResponse;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import static com.consultadd.slackzoom.slack.view.SlackViews.ACTION_EDIT_ACCOUNT_DETAIL;
 
 @Component
 @Slf4j
@@ -19,7 +20,7 @@ public class AddUpdateAccountDetailAction extends AbstractBlockActionHandler {
     public Response apply(BlockActionRequest req, ActionContext ctx) throws SlackApiException, IOException {
         Account account = req.getPayload().getActions()
                 .stream()
-                .filter(action -> SlackViews.ACTION_EDIT_ACCOUNT_DETAIL.equals(action.getActionId()))
+                .filter(action -> ACTION_EDIT_ACCOUNT_DETAIL.equals(action.getActionId()))
                 .findAny()
                 .map(BlockActionPayload.Action::getValue)
                 .map(getAccountService()::getAccountById)

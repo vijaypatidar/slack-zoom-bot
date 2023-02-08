@@ -8,6 +8,7 @@ import com.slack.api.bolt.response.Response;
 import com.slack.api.methods.SlackApiException;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
+import static com.consultadd.slackzoom.slack.view.SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT;
 
 @Component
 public class FreeAccountRequestAction extends AbstractBlockActionHandler {
@@ -16,7 +17,7 @@ public class FreeAccountRequestAction extends AbstractBlockActionHandler {
         String bookingId = req.getPayload()
                 .getActions()
                 .stream()
-                .filter(action -> action.getActionId().equals(SlackViews.ACTION_RELEASE_BOOKED_ACCOUNT))
+                .filter(action -> action.getActionId().equals(ACTION_RELEASE_BOOKED_ACCOUNT))
                 .findAny()
                 .orElseThrow()
                 .getValue();

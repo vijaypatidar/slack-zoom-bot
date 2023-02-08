@@ -18,6 +18,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import static com.consultadd.slackzoom.services.impls.DynamoDbAccountService.*;
+import static com.consultadd.slackzoom.slack.view.SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK;
 
 @Slf4j
 @Component
@@ -30,8 +31,8 @@ public class AddUpdateAccountViewSubmission extends AbstractViewSubmissionHandle
         String callbackId = req.getPayload().getView().getCallbackId();
         log.error("callbackId:{}", callbackId);
         String accountId;
-        if (!SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK.equals(callbackId)) {
-            accountId = callbackId.replace(SlackViews.ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK, "");
+        if (!ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK.equals(callbackId)) {
+            accountId = callbackId.replace(ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK, "");
         } else {
             accountId = UUID.randomUUID().toString();
         }

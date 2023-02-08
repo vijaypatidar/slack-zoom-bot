@@ -10,12 +10,12 @@ import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class AccountTypeCommand extends AbstractSlashCommandHandler {
+public abstract class AbstractAccountTypeCommand extends AbstractSlashCommandHandler {
     private final AccountType accountType;
 
     @Override
     public String getCommandName() {
-        return null;
+        return accountType.getType();
     }
 
     @Override

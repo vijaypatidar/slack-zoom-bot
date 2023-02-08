@@ -1,6 +1,5 @@
 package com.consultadd.slackzoom.slack.view.commands;
 
-import com.consultadd.slackzoom.enums.AccountType;
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 import com.slack.api.bolt.response.Response;
@@ -10,15 +9,16 @@ import com.slack.api.methods.response.conversations.ConversationsHistoryResponse
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @RequiredArgsConstructor
+@Component
 @Slf4j
 public class ClearCommand extends AbstractSlashCommandHandler {
-    private final AccountType accountType;
 
     @Override
     public String getCommandName() {
-        return null;
+        return "clear";
     }
 
     @Override

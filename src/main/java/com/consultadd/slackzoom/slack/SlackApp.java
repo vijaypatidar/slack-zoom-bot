@@ -1,7 +1,6 @@
 package com.consultadd.slackzoom.slack;
 
 import com.consultadd.slackzoom.slack.view.RegistrableComponent;
-import com.consultadd.slackzoom.slack.view.SlackViews;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,6 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 @Slf4j
 public class SlackApp implements ApplicationContextAware {
-    private final SlackViews slackViews;
     private ApplicationContext applicationContext;
 
 
