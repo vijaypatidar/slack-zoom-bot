@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.slack;
+package com.consultadd.slackzoom.slack.view;
 
 import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Account;

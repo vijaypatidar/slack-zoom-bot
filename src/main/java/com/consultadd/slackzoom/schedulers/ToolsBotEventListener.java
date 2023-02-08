@@ -1,7 +1,7 @@
 package com.consultadd.slackzoom.schedulers;
 
 import com.consultadd.slackzoom.events.AccountStatusChangeEvent;
-import com.consultadd.slackzoom.slack.SlackViews;
+import com.consultadd.slackzoom.slack.view.SlackViews;
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
 import com.slack.api.methods.SlackApiException;
