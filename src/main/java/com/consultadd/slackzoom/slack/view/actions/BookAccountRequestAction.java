@@ -1,7 +1,6 @@
 package com.consultadd.slackzoom.slack.view.actions;
 
 import com.consultadd.slackzoom.enums.AccountType;
-import com.consultadd.slackzoom.slack.view.SlackViews;
 import com.slack.api.bolt.context.builtin.ActionContext;
 import com.slack.api.bolt.request.builtin.BlockActionRequest;
 import com.slack.api.bolt.response.Response;
