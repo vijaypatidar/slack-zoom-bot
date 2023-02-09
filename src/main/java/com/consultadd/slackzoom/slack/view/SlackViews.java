@@ -1,4 +1,4 @@
-package com.consultadd.slackzoom.slack;
+package com.consultadd.slackzoom.slack.view;
 
 import com.consultadd.slackzoom.enums.AccountType;
 import com.consultadd.slackzoom.models.Account;
@@ -34,7 +34,7 @@ import static com.consultadd.slackzoom.utils.DateTimeUtils.ZONE_ID;
 public class SlackViews {
     public static final String MODAL_VIEW = "modal";
     public static final String PLAIN_TEXT = "plain_text";
-    public static final String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "find-zoom-account";
+    public static final String SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK = "SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK-";
     public static final String ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK = "ADD_UPDATE_ACCOUNT_ACCOUNT_CALLBACK:";
     public static final String DANGER = "danger";
     public static final String ACTION_RELEASE_BOOKED_ACCOUNT = "ACTION_RELEASE_BOOKED_ACCOUNT";
@@ -115,7 +115,7 @@ public class SlackViews {
 
         return View.builder()
                 .type(MODAL_VIEW)
-                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + ":" + accountType.getType())
+                .callbackId(SAVE_FIND_AND_BOOK_ACCOUNT_CALLBACK + accountType.getType())
                 .title(title)
                 .submit(submit)
                 .close(close)
