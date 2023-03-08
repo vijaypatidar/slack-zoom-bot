@@ -1,0 +1,47 @@
+@startuml
+interface RegistrableComponent{
+    void init(App app)
+    void register(App app)
+}
+
+abstract class AbstractRegistrableComponent
+
+AbstractRegistrableComponent --> RegistrableComponent : <implements>
+
+abstract class AbstractViewSubmissionHandler
+class AccountRequestViewSubmission
+class AddUpdateAccountViewSubmission
+
+AbstractViewSubmissionHandler --> AbstractRegistrableComponent : <extends>
+AccountRequestViewSubmission ---> AbstractViewSubmissionHandler : <extends>
+AddUpdateAccountViewSubmission  ---> AbstractViewSubmissionHandler : <extends>
+
+abstract class AbstractShortcutHandler
+class DashBoardShortcut
+
+AbstractShortcutHandler --> AbstractRegistrableComponent : <extends>
+DashBoardShortcut --> AbstractShortcutHandler : <extends>
+
+abstract class AbstractSlashCommandHandler
+class ClearCommand
+class DashboardCommand
+
+AbstractSlashCommandHandler --> AbstractRegistrableComponent : <extends>
+ClearCommand --> AbstractSlashCommandHandler : <extends>
+DashboardCommand --> AbstractSlashCommandHandler : <extends>
+
+abstract class AbstractBlockActionHandler
+class AddUpdateAccountDetailAction
+class BookAccountRequestAction
+class FreeAccountRequestAction
+class TimeDateBlockAction
+
+
+AbstractBlockActionHandler --> AbstractRegistrableComponent : <extends>
+AddUpdateAccountDetailAction ---> AbstractBlockActionHandler : <extends>
+BookAccountRequestAction ---> AbstractBlockActionHandler : <extends>
+FreeAccountRequestAction ---> AbstractBlockActionHandler : <extends>
+TimeDateBlockAction ---> AbstractBlockActionHandler : <extends>
+
+
+@enduml

@@ -57,7 +57,7 @@ public abstract class AbstractRegistrableComponent implements RegistrableCompone
     }
 
     @Override
-    public void init(App app) {
+    public final void init(App app) {
         this.app = app;
     }
 }
