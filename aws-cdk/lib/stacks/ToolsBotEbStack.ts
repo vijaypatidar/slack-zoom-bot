@@ -1,55 +1,41 @@
 import * as cdk from "aws-cdk-lib";
-import { AttributeType, Table } from "aws-cdk-lib/aws-dynamodb";
 import * as elasticbeanstalk from "aws-cdk-lib/aws-elasticbeanstalk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { StageType } from "./Stage";
 import s3assets = require("aws-cdk-lib/aws-s3-assets");
+import { DynamoDBStack } from "./DynamoDBStack";
+import { ToolsSlackBotStackProps } from "../../bin/aws-cdk";
+import { TableName } from "../constants/Table";
 
-export interface ToolsSlackBotStackProps extends cdk.StackProps {
-  stage: StageType;
+interface ToolsSlackBotEbStackProps extends ToolsSlackBotStackProps {
+  dynamoDBStack: DynamoDBStack;
 }
-export class ToolsSlackBotStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: ToolsSlackBotStackProps) {
+export class ToolsSlackEbBotStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: ToolsSlackBotEbStackProps) {
     super(scope, id, props);
-    const { stage } = props;
-    const appName = "tools-bot";
-    const accountsTable = new Table(this, `slack-tools-bot-accounts-${stage}`, {
-      partitionKey: {
-        name: "accountId",
-        type: AttributeType.STRING,
-      },
-      tableName: `slack-tools-bot-accounts-${stage}`,
-    });
-
-    const bookingsTable = new Table(this, `slack-tools-bot-bookings-${stage}`, {
-      partitionKey: {
-        name: "bookingId",
-        type: AttributeType.STRING,
-      },
-      tableName: `slack-tools-bot-bookings-${stage}`,
-    });
-
-    accountsTable.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
-    bookingsTable.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+    const { stage, appName, dynamoDBStack } = props;
 
     const EbInstanceRole = new iam.Role(
       this,
-      `${appName}-aws-elasticbeanstalk-ec2-role`,
+      `${appName}-eb-ec2-role-${stage}`,
       {
         assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
       }
     );
 
-    bookingsTable.grantReadWriteData(EbInstanceRole);
-    accountsTable.grantReadWriteData(EbInstanceRole);
+    dynamoDBStack
+      .getTable(TableName.ACCOUNT)
+      .grantReadWriteData(EbInstanceRole);
+    dynamoDBStack
+      .getTable(TableName.BOOKING)
+      .grantReadWriteData(EbInstanceRole);
 
     const managedPolicy = iam.ManagedPolicy.fromAwsManagedPolicyName(
       "AWSElasticBeanstalkWebTier"
     );
     EbInstanceRole.addManagedPolicy(managedPolicy);
 
-    const profileName = `${appName}-InstanceProfile`;
+    const profileName = `${appName}-EB-InstanceProfile-${stage}`;
     const instanceProfile = new iam.CfnInstanceProfile(this, profileName, {
       instanceProfileName: profileName,
       roles: [EbInstanceRole.roleName],
@@ -61,7 +47,7 @@ export class ToolsSlackBotStack extends cdk.Stack {
     });
 
     const webAppZipArchive = new s3assets.Asset(this, "ToolsBotWebZip", {
-      path: `${__dirname}/../../build/libs/slack-zoom-0.0.1-SNAPSHOT.jar`,
+      path: `${__dirname}/../../../build/libs/slack-zoom-0.0.1-SNAPSHOT.jar`,
     });
 
     const appVersionProps = new elasticbeanstalk.CfnApplicationVersion(
@@ -85,11 +71,11 @@ export class ToolsSlackBotStack extends cdk.Stack {
     const environmentVaribles: Env[] = [
       {
         key: "DB_ACCOUNTS_TABLE_NAME",
-        value: accountsTable.tableName,
+        value: dynamoDBStack.getTable(TableName.ACCOUNT).tableName,
       },
       {
         key: "DB_BOOKINGS_TABLE_NAME",
-        value: bookingsTable.tableName,
+        value: dynamoDBStack.getTable(TableName.BOOKING).tableName,
       },
       {
         key: "SLACK_BOT_TOKEN",
